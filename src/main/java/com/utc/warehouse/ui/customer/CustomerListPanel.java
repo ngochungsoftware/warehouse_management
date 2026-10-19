@@ -74,33 +74,16 @@ public class CustomerListPanel extends BasePanel {
     }
 
     public void reload() {
-        try {
-            List<Customer> list = service.allCustomers();
-            DefaultTableModel m = TableUtils.modelOf(table);
-            m.setRowCount(0);
-            for (Customer c : list) m.addRow(new Object[]{ c.getId(), c.getName(), c.getPhone(), c.getAddress(), c.getEmail() });
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Lỗi: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-        }
+        // STUB: bỏ trống logic server — chỉ giữ UI
     }
 
     private Customer selected() {
-        int row = table.getSelectedRow(); if (row < 0) return null;
-        int modelRow = table.convertRowIndexToModel(row);
-        Object idObj = TableUtils.modelOf(table).getValueAt(modelRow, 0);
-        Integer id = (idObj instanceof Integer) ? (Integer) idObj : Integer.valueOf(idObj.toString());
-        return service.allCustomers().stream().filter(s -> s.getId().equals(id)).findFirst().orElse(null);
+        // STUB: bỏ trống logic server — chỉ giữ UI
+        return null;
     }
 
     private void onDelete() {
-        Customer c = selected();
-        if (c == null) { JOptionPane.showMessageDialog(this, "Chọn 1 khách hàng để xóa."); return; }
-        int ok = JOptionPane.showConfirmDialog(this, "Xóa khách hàng '" + c.getName() + "' ?",
-                "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-        if (ok == JOptionPane.YES_OPTION) {
-            try { service.deleteCustomer(c.getId()); reload(); }
-            catch (Exception ex) { JOptionPane.showMessageDialog(this, "Lỗi xóa: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE); }
-        }
+        // STUB: bỏ trống logic server — chỉ giữ UI
     }
 
     private JButton primaryButton(String t)   { return styleButton(t, UIConstants.PRIMARY,   Color.WHITE); }

@@ -69,20 +69,7 @@ public class SupplierDialog extends JDialog {
     private JLabel label(String s) { JLabel l = new JLabel(s); l.setFont(UIConstants.FONT_NORMAL); return l; }
 
     private void onSave() {
-        if (txtName.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Tên NCC không được trống."); return;
-        }
-        try {
-            Supplier s = (original == null) ? new Supplier() : original;
-            s.setName(txtName.getText().trim());
-            s.setPhone(txtPhone.getText().trim());
-            s.setEmail(txtEmail.getText().trim());
-            s.setAddress(txtAddress.getText().trim());
-            if (original == null) service.saveSupplier(s); else service.updateSupplier(s);
-            saved = true; dispose();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Lỗi: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-        }
+        // STUB: bỏ trống logic server — chỉ giữ UI
     }
 
     public boolean isSaved() { return saved; }

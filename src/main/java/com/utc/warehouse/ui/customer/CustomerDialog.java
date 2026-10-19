@@ -69,20 +69,7 @@ public class CustomerDialog extends JDialog {
     private JLabel label(String s) { JLabel l = new JLabel(s); l.setFont(UIConstants.FONT_NORMAL); return l; }
 
     private void onSave() {
-        if (txtName.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Tên khách hàng không được trống."); return;
-        }
-        try {
-            Customer c = (original == null) ? new Customer() : original;
-            c.setName(txtName.getText().trim());
-            c.setPhone(txtPhone.getText().trim());
-            c.setEmail(txtEmail.getText().trim());
-            c.setAddress(txtAddress.getText().trim());
-            if (original == null) service.saveCustomer(c); else service.updateCustomer(c);
-            saved = true; dispose();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Lỗi: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-        }
+        // STUB: bỏ trống logic server — chỉ giữ UI
     }
 
     public boolean isSaved() { return saved; }
