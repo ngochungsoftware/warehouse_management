@@ -48,6 +48,8 @@ public class ProductListPanel extends BasePanel {
     private JTextField searchField;
     /** Cache id -> imagePath để renderer không phải query DB lặp lại. */
     private final Map<Integer, String> imagePathCache = new HashMap<>();
+    /** Cache id -> BufferedImage (đã scale 40x40) để renderer KHÔNG phải đọc disk mỗi lần vẽ. */
+    private final Map<Integer, BufferedImage> imageThumbCache = new HashMap<>();
     /** Cache id -> Product để tránh service.search() mỗi lần. */
     private final Map<Integer, Product> productCache = new HashMap<>();
 
@@ -142,21 +144,24 @@ public class ProductListPanel extends BasePanel {
         // Double-click một dòng → mở dialog xem chi tiết sản phẩm
         table.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override public void mouseClicked(java.awt.event.MouseEvent e) {
-                if (e.getClickCount() == 2 && table.getSelectedRow() >= 0) {
-                    Product p = selected();
-                    if (p != null) {
-                        ProductViewDialog dlg = new ProductViewDialog(
-                                SwingUtilities.getWindowAncestor(ProductListPanel.this), p);
-                        dlg.setVisible(true);
-                    }
-                }
+                if (e.getClickCount() < 2) return;
+                int viewRow = table.rowAtPoint(e.getPoint());
+                if (viewRow < 0) return;
+                int modelRow = table.convertRowIndexToModel(viewRow);
+                // Đảm bảo dòng được chọn (phòng khi reload vừa reset selection)
+                table.setRowSelectionInterval(viewRow, viewRow);
+                Product p = selected(modelRow);
+                if (p == null) return;
+                ProductViewDialog dlg = new ProductViewDialog(
+                        SwingUtilities.getWindowAncestor(ProductListPanel.this), p);
+                dlg.setVisible(true);
             }
         });
 
         return TableUtils.scrollFor(table);
     }
 
-    /** Renderer cho cột ảnh: lấy imagePath từ cache, scale 40x40. */
+    /** Renderer cho cột ảnh: lấy BufferedImage từ cache (đã scale 40x40 sẵn). */
     private class ImageCellRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable t, Object value, boolean sel, boolean focus, int row, int col) {
@@ -172,18 +177,20 @@ public class ProductListPanel extends BasePanel {
             }
             Integer id = (idObj instanceof Integer) ? (Integer) idObj : Integer.valueOf(idObj.toString());
 
-            // Lấy từ cache (đã fill khi reload) thay vì query DB mỗi lần vẽ
+            // 1) Ưu tiên cache RAM (đã load 1 lần khi reload)
+            BufferedImage thumb = imageThumbCache.get(id);
+            if (thumb != null) {
+                l.setIcon(new ImageIcon(thumb));
+                l.setText("");
+                return l;
+            }
+            // 2) Có path nhưng cache rỗng (chưa preload xong) → hiện placeholder, KHÔNG đọc disk tại đây
             String path = imagePathCache.get(id);
             if (path == null || path.isBlank()) {
                 l.setText("—"); l.setForeground(UIConstants.TEXT_MUTED);
                 return l;
             }
-            BufferedImage img = imageService.load(path);
-            if (img == null) {
-                l.setText("⚠"); l.setForeground(UIConstants.WARNING);
-                return l;
-            }
-            l.setIcon(new ImageIcon(scaleImage(img, 40, 40)));
+            l.setText("…"); l.setForeground(UIConstants.TEXT_MUTED);
             return l;
         }
     }
@@ -208,16 +215,38 @@ public class ProductListPanel extends BasePanel {
         try {
             List<Product> list = service.search(keyword);
             DefaultTableModel m = TableUtils.modelOf(table);
+
+            // Lưu lại dòng đang chọn để sau khi populate xong restore theo ID
+            int previousSelected = table.getSelectedRow();
+            Integer previousId = null;
+            if (previousSelected >= 0) {
+                try {
+                    Object v = m.getValueAt(table.convertRowIndexToModel(previousSelected), COL_ID);
+                    if (v != null) previousId = (v instanceof Integer) ? (Integer) v
+                            : Integer.valueOf(v.toString());
+                } catch (Exception ignored) { }
+            }
+
             m.setRowCount(0);
 
-            // Refresh cache để renderer không query DB
+            // Refresh cache để renderer không query DB / đọc disk
             productCache.clear();
             imagePathCache.clear();
+            imageThumbCache.clear();
 
             for (Product p : list) {
                 Integer id = p.getId();
                 productCache.put(id, p);
-                imagePathCache.put(id, p.getImagePath());
+                String path = p.getImagePath();
+                imagePathCache.put(id, path);
+                // Eager-load thumbnail trong EDT — list thường nhỏ (< vài trăm), chấp nhận
+                // nếu ảnh to, sẽ được tải lần lượt. Ảnh đã load sẽ cache → click lần 2+ cực nhanh.
+                if (path != null && !path.isBlank()) {
+                    BufferedImage img = imageService.load(path);
+                    if (img != null) {
+                        imageThumbCache.put(id, (BufferedImage) scaleImage(img, 40, 40));
+                    }
+                }
 
                 m.addRow(new Object[]{
                         null,                                // Ảnh — renderer vẽ
@@ -235,6 +264,22 @@ public class ProductListPanel extends BasePanel {
                         Boolean.TRUE.equals(p.getActive()) ? "✓" : "✗"     // 12 Active
                 });
             }
+            // Restore selection theo ID (vì setRowCount(0) + addRow làm mất selection)
+            if (previousId != null) {
+                for (int r = 0; r < m.getRowCount(); r++) {
+                    Object v = m.getValueAt(r, COL_ID);
+                    Integer id = (v instanceof Integer) ? (Integer) v
+                            : (v == null ? null : Integer.valueOf(v.toString()));
+                    if (previousId.equals(id)) {
+                        int viewRow = table.convertRowIndexToView(r);
+                        if (viewRow >= 0) {
+                            table.setRowSelectionInterval(viewRow, viewRow);
+                            table.scrollRectToVisible(table.getCellRect(viewRow, 0, true));
+                        }
+                        break;
+                    }
+                }
+            }
         } catch (Exception ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Lỗi tải dữ liệu: " + ex.getMessage(),
@@ -247,6 +292,12 @@ public class ProductListPanel extends BasePanel {
         int row = table.getSelectedRow();
         if (row < 0) return null;
         int modelRow = table.convertRowIndexToModel(row);
+        return selected(modelRow);
+    }
+
+    /** Lấy Product theo modelRow cụ thể (dùng khi biết chính xác dòng user click). */
+    private Product selected(int modelRow) {
+        if (modelRow < 0 || modelRow >= TableUtils.modelOf(table).getRowCount()) return null;
         Object idObj = TableUtils.modelOf(table).getValueAt(modelRow, COL_ID);
         if (idObj == null) return null;
         Integer id;

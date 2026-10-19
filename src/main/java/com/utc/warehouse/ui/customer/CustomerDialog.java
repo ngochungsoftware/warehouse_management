@@ -69,7 +69,7 @@ public class CustomerDialog extends JDialog {
     private JLabel label(String s) { JLabel l = new JLabel(s); l.setFont(UIConstants.FONT_NORMAL); return l; }
 
     private void onSave() {
-        // STUB: bỏ trống logic server — chỉ giữ UI
+
     }
 
     public boolean isSaved() { return saved; }

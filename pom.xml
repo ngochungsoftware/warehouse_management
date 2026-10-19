@@ -73,6 +73,13 @@
             <version>${flatlaf.version}</version>
         </dependency>
 
+        <!-- JFreeChart: vẽ biểu đồ (doanh thu, tồn kho, top SP...) -->
+        <dependency>
+            <groupId>org.jfree</groupId>
+            <artifactId>jfreechart</artifactId>
+            <version>1.5.5</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>junit</groupId>

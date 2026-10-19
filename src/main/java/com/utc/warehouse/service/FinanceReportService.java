@@ -24,4 +24,12 @@ public class FinanceReportService {
     public FinanceReportDAO.DashboardSummary dashboardSummary() {
         return dao.dashboardSummary();
     }
+
+    public List<FinanceReportDAO.CategoryStockRow> inventoryByCategory() {
+        return dao.inventoryByCategory();
+    }
+
+    public List<FinanceReportDAO.StockFlowRow> stockFlowByDate(LocalDate from, LocalDate to) {
+        return dao.stockFlowByDate(from, to);
+    }
 }

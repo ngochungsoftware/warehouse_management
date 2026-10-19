@@ -74,16 +74,13 @@ public class CustomerListPanel extends BasePanel {
     }
 
     public void reload() {
-        // STUB: bỏ trống logic server — chỉ giữ UI
     }
 
     private Customer selected() {
-        // STUB: bỏ trống logic server — chỉ giữ UI
         return null;
     }
 
     private void onDelete() {
-        // STUB: bỏ trống logic server — chỉ giữ UI
     }
 
     private JButton primaryButton(String t)   { return styleButton(t, UIConstants.PRIMARY,   Color.WHITE); }

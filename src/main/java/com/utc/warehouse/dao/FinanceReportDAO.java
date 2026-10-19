@@ -274,6 +274,81 @@ public class FinanceReportDAO {
         }
     }
 
+    /* ============== Tồn kho theo danh mục (cho pie chart) ============== */
+    /** Key: tên danh mục, Value: tổng số lượng tồn (đơn vị: sản phẩm). */
+    public List<CategoryStockRow> inventoryByCategory() {
+        EntityManager em = HibernateUtil.getEntityManager();
+        try {
+            @SuppressWarnings("unchecked")
+            List<Object[]> rows = em.createQuery(
+                    "SELECT c.name, " +
+                            " COALESCE(SUM(CASE WHEN t.type = com.utc.warehouse.enums.TransactionType.IMPORT " +
+                            "                  THEN d.quantity ELSE -d.quantity END), 0) " +
+                            "FROM Product p " +
+                            "LEFT JOIN p.category c " +
+                            "LEFT JOIN StockTransactionDetail d ON d.product = p " +
+                            "LEFT JOIN d.transaction t " +
+                            "WHERE p.active = TRUE " +
+                            "GROUP BY c.name " +
+                            "ORDER BY SUM(d.quantity) DESC")
+                    .getResultList();
+            List<CategoryStockRow> out = new ArrayList<>();
+            for (Object[] r : rows) {
+                String name = r[0] == null ? "(Chưa phân loại)" : (String) r[0];
+                long qty = ((Number) r[1]).longValue();
+                if (qty > 0) out.add(new CategoryStockRow(name, qty));
+            }
+            return out;
+        } finally {
+            em.close();
+        }
+    }
+
+    public static final class CategoryStockRow {
+        public final String categoryName;
+        public final long quantity;
+        public CategoryStockRow(String n, long q) { this.categoryName = n; this.quantity = q; }
+        public String getCategoryName() { return categoryName; }
+        public long getQuantity() { return quantity; }
+    }
+
+    /* ============== Nhập/Xuất theo ngày (cho stacked bar) ============== */
+    public List<StockFlowRow> stockFlowByDate(LocalDate from, LocalDate to) {
+        EntityManager em = HibernateUtil.getEntityManager();
+        try {
+            @SuppressWarnings("unchecked")
+            List<Object[]> rows = em.createQuery(
+                    "SELECT t.issueDate, t.type, COALESCE(SUM(d.quantity), 0) " +
+                            "FROM StockTransaction t LEFT JOIN t.details d " +
+                            "WHERE t.issueDate >= :from AND t.issueDate <= :to " +
+                            "GROUP BY t.issueDate, t.type " +
+                            "ORDER BY t.issueDate")
+                    .setParameter("from", from)
+                    .setParameter("to", to)
+                    .getResultList();
+            List<StockFlowRow> out = new ArrayList<>();
+            for (Object[] r : rows) {
+                LocalDate d = (LocalDate) r[0];
+                String type = r[1] == null ? "" : r[1].toString();
+                long qty = ((Number) r[2]).longValue();
+                out.add(new StockFlowRow(d, type, qty));
+            }
+            return out;
+        } finally {
+            em.close();
+        }
+    }
+
+    public static final class StockFlowRow {
+        public final LocalDate date;
+        public final String type;   // IMPORT / EXPORT
+        public final long quantity;
+        public StockFlowRow(LocalDate d, String t, long q) { this.date = d; this.type = t; this.quantity = q; }
+        public LocalDate getDate() { return date; }
+        public String getType() { return type; }
+        public long getQuantity() { return quantity; }
+    }
+
     private static BigDecimal toBig(Object o) {
         if (o == null) return BigDecimal.ZERO;
         if (o instanceof BigDecimal bd) return bd;

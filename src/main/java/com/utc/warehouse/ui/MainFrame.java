@@ -193,13 +193,21 @@ public class MainFrame extends JFrame {
             if (!e.getValueIsAdjusting()) {
                 MenuItem m = menuList.getSelectedValue();
                 if (m != null) {
-                    ((CardLayout) contentPanel.getLayout()).show(contentPanel, m.label);
-                    // Tự reload dữ liệu mỗi khi chuyển trang (cho Dashboard / Báo cáo / Hóa đơn)
+                    // Tìm panel hiện đang hiển thị (nếu có) trước khi switch
+                    Component prevVisible = null;
                     for (Component c : contentPanel.getComponents()) {
-                        if (c.isVisible() && c instanceof com.utc.warehouse.ui.common.BasePanel bp) {
-                            try { bp.reload(); } catch (Exception ignored) { }
-                            break;
-                        }
+                        if (c.isVisible()) { prevVisible = c; break; }
+                    }
+                    ((CardLayout) contentPanel.getLayout()).show(contentPanel, m.label);
+                    // Chỉ reload khi thực sự chuyển sang panel khác (tránh reload
+                    // mỗi lần click lại cùng 1 menu đã chọn → reset selection & cache).
+                    Component newVisible = null;
+                    for (Component c : contentPanel.getComponents()) {
+                        if (c.isVisible()) { newVisible = c; break; }
+                    }
+                    if (newVisible != null && newVisible != prevVisible
+                            && newVisible instanceof com.utc.warehouse.ui.common.BasePanel bp) {
+                        try { bp.reload(); } catch (Exception ignored) { }
                     }
                 }
             }
