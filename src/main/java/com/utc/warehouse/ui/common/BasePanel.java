@@ -91,6 +91,14 @@ public class BasePanel extends JPanel {
         if (footer != null) add(footer, BorderLayout.SOUTH);
 
         if (enableDefaultShortcuts) installDefaultShortcuts();
+
+        // Subclass có thể override reloadDataOnShow() để auto-load khi panel
+        // lần đầu được hiển thị. Mặc định gọi reload().
+    }
+
+    /** Được gọi 1 lần sau init() để load dữ liệu ban đầu. Mặc định gọi reload(). */
+    public void reloadDataOnShow() {
+        SwingUtilities.invokeLater(this::reload);
     }
 
     /* ============== Shortcut mặc định ============== */

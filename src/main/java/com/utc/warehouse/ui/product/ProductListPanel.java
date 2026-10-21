@@ -4,6 +4,7 @@ import com.utc.warehouse.entity.Product;
 import com.utc.warehouse.service.ImageService;
 import com.utc.warehouse.service.ProductService;
 import com.utc.warehouse.ui.common.BasePanel;
+import com.utc.warehouse.ui.common.TableDoubleClick;
 import com.utc.warehouse.ui.common.TableExportHelper;
 import com.utc.warehouse.ui.common.TableUtils;
 import com.utc.warehouse.ui.common.UIConstants;
@@ -140,20 +141,26 @@ public class ProductListPanel extends BasePanel {
         table.setRowHeight(48);
 
         // Double-click một dòng → mở dialog xem chi tiết sản phẩm
-        table.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
-                if (e.getClickCount() == 2 && table.getSelectedRow() >= 0) {
-                    Product p = selected();
-                    if (p != null) {
-                        ProductViewDialog dlg = new ProductViewDialog(
-                                SwingUtilities.getWindowAncestor(ProductListPanel.this), p);
-                        dlg.setVisible(true);
-                    }
-                }
-            }
+        TableDoubleClick.installFor(table, this::productAtRow, p -> {
+            ProductViewDialog dlg = new ProductViewDialog(
+                    SwingUtilities.getWindowAncestor(ProductListPanel.this), p);
+            dlg.setVisible(true);
         });
 
         return TableUtils.scrollFor(table);
+    }
+
+    /** Tra Product từ model row index (dùng cho double-click). */
+    private Product productAtRow(int modelRow) {
+        Object idObj = TableUtils.modelOf(table).getValueAt(modelRow, COL_ID);
+        if (idObj == null) return null;
+        final Integer id;
+        try { id = (idObj instanceof Integer) ? (Integer) idObj : Integer.valueOf(idObj.toString()); }
+        catch (NumberFormatException ex) { return null; }
+        if (id == null) return null;
+        Product cached = productCache.get(id);
+        return cached != null ? cached
+                : service.search("").stream().filter(x -> x.getId().equals(id)).findFirst().orElse(null);
     }
 
     /** Renderer cho cột ảnh: lấy imagePath từ cache, scale 40x40. */
@@ -163,6 +170,11 @@ public class ProductListPanel extends BasePanel {
             JLabel l = (JLabel) super.getTableCellRendererComponent(t, "", sel, focus, row, col);
             l.setHorizontalAlignment(SwingConstants.CENTER);
             l.setText("");
+
+            // Swing TÁI SỬ DỤNG cùng một JLabel cho nhiều dòng. Nếu không xoá icon
+            // ở đầu mỗi lần vẽ thì dòng không có ảnh sẽ mượn/nhận lại icon
+            // của dòng đã vẽ trước đó -> một sản phẩm có ảnh hiện ở MỌI dòng.
+            l.setIcon(null);
 
             int modelRow = t.convertRowIndexToModel(row);
             Object idObj = TableUtils.modelOf(t).getValueAt(modelRow, COL_ID);

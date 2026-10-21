@@ -231,6 +231,12 @@ public class InvoiceService {
 
     public List<Invoice> allInvoices() { return invoiceDAO.findAll(); }
 
+    /** Hóa đơn kèm items + customer — dùng cho bảng danh sách và màn xem chi tiết. */
+    public List<Invoice> allInvoicesWithDetails() { return invoiceDAO.findAllWithDetails(); }
+
+    /** Tìm hóa đơn theo mã, kèm items + customer đã nạp sẵn (tránh LazyInitializationException). */
+    public Invoice findByCodeWithDetails(String code) { return invoiceDAO.findByCodeWithDetails(code).orElse(null); }
+
     public Optional<Invoice> findInvoice(Integer id) { return invoiceDAO.findById(id); }
 
     public List<Payment> allPayments() { return paymentDAO.findAll(); }

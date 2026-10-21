@@ -70,7 +70,37 @@ public class SupplierListPanel extends BasePanel {
     protected JComponent buildContent() {
         table = TableUtils.createTable(COLS, new Object[0][]);
         TableUtils.centerColumn(table, 0);
+
+        // Double-click 1 dòng → xem chi tiết nhà cung cấp
+        com.utc.warehouse.ui.common.TableDoubleClick.installFor(
+                table, this::supplierAtRow, this::showSupplierDetail);
         return TableUtils.scrollFor(table);
+    }
+
+    /** Tra Supplier từ model row index (dùng cho double-click). */
+    private Supplier supplierAtRow(int modelRow) {
+        Object idObj = TableUtils.modelOf(table).getValueAt(modelRow, 0);
+        if (idObj == null) return null;
+        final Integer id;
+        try { id = (idObj instanceof Integer) ? (Integer) idObj : Integer.valueOf(idObj.toString()); }
+        catch (NumberFormatException ex) { return null; }
+        return service.allSuppliers().stream()
+                .filter(s -> s.getId().equals(id)).findFirst().orElse(null);
+    }
+
+    /** Dialog xem nhanh thông tin nhà cung cấp (read-only). */
+    private void showSupplierDetail(Supplier s) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Mã: ").append(s.getId()).append('\n');
+        sb.append("Tên: ").append(s.getName()).append('\n');
+        sb.append("SĐT: ").append(s.getPhone() == null || s.getPhone().isBlank() ? "(trống)" : s.getPhone()).append('\n');
+        sb.append("Email: ").append(s.getEmail() == null || s.getEmail().isBlank() ? "(trống)" : s.getEmail()).append('\n');
+        sb.append("Địa chỉ: ").append(s.getAddress() == null || s.getAddress().isBlank() ? "(trống)" : s.getAddress()).append('\n');
+        JTextArea ta = new JTextArea(sb.toString());
+        ta.setEditable(false);
+        ta.setFont(UIConstants.FONT_NORMAL);
+        JOptionPane.showMessageDialog(this, new JScrollPane(ta),
+                "Chi tiết " + s.getName(), JOptionPane.PLAIN_MESSAGE);
     }
 
     public void reload() {

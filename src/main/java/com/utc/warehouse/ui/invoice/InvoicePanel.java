@@ -1,6 +1,7 @@
 package com.utc.warehouse.ui.invoice;
 
 import com.utc.warehouse.entity.Invoice;
+import com.utc.warehouse.entity.InvoiceItem;
 import com.utc.warehouse.service.AuthService;
 import com.utc.warehouse.service.InvoiceService;
 import com.utc.warehouse.ui.common.BasePanel;
@@ -87,12 +88,61 @@ public class InvoicePanel extends BasePanel {
         TableUtils.centerColumn(table, 1);
         TableUtils.centerColumn(table, 6);
         for (int i = 3; i <= 5; i++) TableUtils.rightColumn(table, i);
+
+        // Double-click 1 dòng → mở chi tiết hóa đơn
+        com.utc.warehouse.ui.common.TableDoubleClick.installFor(
+                table,
+                modelRow -> {
+                    try {
+                        return invoiceAtRow(modelRow);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(
+                                SwingUtilities.getWindowAncestor(InvoicePanel.this),
+                                "Lỗi tải chi tiết hóa đơn:\n" + ex.getMessage(),
+                                "Lỗi", JOptionPane.ERROR_MESSAGE);
+                        return null;
+                    }
+                },
+                inv -> showDetail(inv));
+
+        // Auto-load dữ liệu ngay khi panel hiển thị lên — gọi reload() qua hook reloadDataOnShow().
         return TableUtils.scrollFor(table);
+    }
+
+    /** Tra Invoice từ model row index (dùng cho double-click). */
+    private Invoice invoiceAtRow(int modelRow) {
+        Object codeObj = model.getValueAt(modelRow, 0);
+        if (codeObj == null) return null;
+        String code = codeObj.toString();
+
+        // Hàng đầu tiên là Code. Tra Invoice qua code bằng query JOIN FETCH để items
+        // đã nạp sẵn — nếu dùng allInvoices() thì entity detached và
+        // inv.getItems() sẽ ném LazyInitializationException.
+        try {
+            Invoice inv = service.findByCodeWithDetails(code);
+            if (inv != null) return inv;
+            // Fallback: bảng đang hiển thị dữ liệu cũ, code không còn trong DB.
+            JOptionPane.showMessageDialog(
+                    SwingUtilities.getWindowAncestor(InvoicePanel.this),
+                    "Không tìm thấy hóa đơn có mã '" + code + "' trong dữ liệu.\n" +
+                            "Hãy bấm \"Làm mới\" để tải lại danh sách.",
+                    "Không tìm thấy", JOptionPane.WARNING_MESSAGE);
+            return null;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(
+                    SwingUtilities.getWindowAncestor(InvoicePanel.this),
+                    "Không thể tải chi tiết hóa đơn '" + code + "':\n"
+                            + ex.getClass().getSimpleName() + ": " + ex.getMessage(),
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return null;
+        }
     }
 
     public void reload() {
         try {
-            List<Invoice> all = service.allInvoices();
+            List<Invoice> all = service.allInvoicesWithDetails();
             model.setRowCount(0);
             for (Invoice inv : all) {
                 if (!matchStatus(inv)) continue;
@@ -107,7 +157,11 @@ public class InvoicePanel extends BasePanel {
                 });
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Lỗi: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(
+                    SwingUtilities.getWindowAncestor(InvoicePanel.this),
+                    "Lỗi tải danh sách hóa đơn:\n" + ex.getMessage(),
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -136,8 +190,10 @@ public class InvoicePanel extends BasePanel {
     private Invoice selected() {
         int r = table.getSelectedRow();
         if (r < 0) return null;
-        String code = (String) model.getValueAt(table.convertRowIndexToModel(r), 0);
-        return service.allInvoices().stream().filter(i -> i.getCode().equals(code)).findFirst().orElse(null);
+        Object codeObj = model.getValueAt(table.convertRowIndexToModel(r), 0);
+        if (codeObj == null) return null;
+        // Dùng bản JOIN FETCH để items đã nạp sẵn — showDetail đọc inv.getItems().
+        return service.findByCodeWithDetails(codeObj.toString());
     }
 
     private void onNew() {
@@ -215,28 +271,64 @@ public class InvoicePanel extends BasePanel {
     }
 
     private void showDetail(Invoice inv) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Mã HĐ: ").append(inv.getCode()).append('\n');
-        sb.append("Ngày: ").append(inv.getIssueDate()).append('\n');
-        sb.append("Khách: ").append(inv.getCustomer() == null ? "(Khách lẻ)" : inv.getCustomer().getName()).append('\n');
-        sb.append("Trạng thái: ").append(statusVi(inv.getStatus().name())).append("\n\n");
-        sb.append(String.format("%-6s %-15s %-10s%n", "SL", "Đơn giá", "Thành tiền"));
-        for (var it : inv.getItems()) {
-            sb.append(String.format("%-6d %-15s %-10s%n",
-                    it.getQuantity(),
-                    MoneyFormat.format(it.getUnitPrice()),
-                    MoneyFormat.format(it.getLineTotal())));
+        try {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Mã HĐ: ").append(inv.getCode()).append('\n');
+            sb.append("Ngày: ").append(inv.getIssueDate()).append('\n');
+            sb.append("Khách: ").append(inv.getCustomer() == null ? "(Khách lẻ)" : inv.getCustomer().getName()).append('\n');
+            sb.append("Trạng thái: ").append(statusVi(inv.getStatus().name())).append("\n\n");
+
+            List<InvoiceItem> items = safeItems(inv);
+            if (items == null) {
+                sb.append("(Không tải được danh sách sản phẩm của hóa đơn)\n\n");
+            } else if (items.isEmpty()) {
+                sb.append("(Hóa đơn chưa có sản phẩm)\n\n");
+            } else {
+                sb.append(String.format("%-6s %-15s %-10s%n", "SL", "Đơn giá", "Thành tiền"));
+                for (var it : items) {
+                    sb.append(String.format("%-6d %-15s %-10s%n",
+                            it.getQuantity(),
+                            MoneyFormat.format(it.getUnitPrice()),
+                            MoneyFormat.format(it.getLineTotal())));
+                }
+                sb.append('\n');
+            }
+
+            sb.append("Tổng: ").append(MoneyFormat.format(inv.getTotal())).append(" đ");
+            sb.append("\nĐã thu: ").append(MoneyFormat.format(inv.getPaid())).append(" đ");
+            sb.append("\nCòn nợ: ").append(MoneyFormat.format(inv.getDebt())).append(" đ");
+            if (inv.getNote() != null && !inv.getNote().isBlank())
+                sb.append("\nGhi chú: ").append(inv.getNote());
+
+            JTextArea ta = new JTextArea(sb.toString());
+            ta.setEditable(false);
+            ta.setFont(Theme.FONT_NORMAL);
+            JOptionPane.showMessageDialog(
+                    SwingUtilities.getWindowAncestor(InvoicePanel.this),
+                    new JScrollPane(ta),
+                    "Chi tiết " + inv.getCode(), JOptionPane.PLAIN_MESSAGE);
+        } catch (Throwable t) {
+            // Nuốt lỗi trong mouse listener sẽ khiến Swing im lặng — phải bắt và báo.
+            t.printStackTrace();
+            JOptionPane.showMessageDialog(
+                    SwingUtilities.getWindowAncestor(InvoicePanel.this),
+                    "Không xem được chi tiết hóa đơn:\n"
+                            + t.getClass().getSimpleName() + "\n" + t.getMessage(),
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
-        sb.append("\nTổng: ").append(MoneyFormat.format(inv.getTotal())).append(" đ");
-        sb.append("\nĐã thu: ").append(MoneyFormat.format(inv.getPaid())).append(" đ");
-        sb.append("\nCòn nợ: ").append(MoneyFormat.format(inv.getDebt())).append(" đ");
-        if (inv.getNote() != null && !inv.getNote().isBlank())
-            sb.append("\nGhi chú: ").append(inv.getNote());
-        JTextArea ta = new JTextArea(sb.toString());
-        ta.setEditable(false);
-        ta.setFont(Theme.FONT_NORMAL);
-        JOptionPane.showMessageDialog(this, new JScrollPane(ta),
-                "Chi tiết " + inv.getCode(), JOptionPane.PLAIN_MESSAGE);
+    }
+
+    /**
+     * Lấy items của hóa đơn, an toàn với Hibernate lazy loading.
+     * Trả về null nếu không tải được (session đã đóng, detached entity...).
+     */
+    private List<InvoiceItem> safeItems(Invoice inv) {
+        try {
+            return inv.getItems();
+        } catch (Throwable t) {
+            t.printStackTrace();
+            return null;
+        }
     }
 
     private JButton primaryButton(String t) {

@@ -63,6 +63,9 @@ public class TransactionHistoryPanel extends BasePanel {
         TableUtils.centerColumn(table, 1);
         TableUtils.centerColumn(table, 2);
         TableUtils.centerColumn(table, 6);
+
+        // Double-click 1 dòng → xem chi tiết phiếu nhập/xuất
+        com.utc.warehouse.ui.common.TableDoubleClick.installOn(table, r -> viewDetail());
         return TableUtils.scrollFor(table);
     }
 

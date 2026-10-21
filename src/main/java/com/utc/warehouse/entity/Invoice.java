@@ -143,8 +143,9 @@ public class Invoice {
     public void recomputeStatus() {
         if (status == InvoiceStatus.CANCELLED || status == InvoiceStatus.DRAFT) return;
         int cmp = paid.compareTo(total);
-        if (cmp >= 0)      status = InvoiceStatus.PAID;
-        else if (cmp > 0)  status = InvoiceStatus.PARTIAL;
-        else               status = InvoiceStatus.ISSUED;
+        if (cmp >= 0)       status = InvoiceStatus.PAID;    // đã thu đủ
+        // paid > 0 nhưng < total => thu một phần (cmp == -1 vẫn là đã thu)
+        else if (paid.signum() > 0) status = InvoiceStatus.PARTIAL;
+        else                        status = InvoiceStatus.ISSUED;   // chưa thu gì
     }
 }

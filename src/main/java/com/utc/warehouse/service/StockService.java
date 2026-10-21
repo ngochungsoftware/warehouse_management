@@ -51,8 +51,9 @@ public class StockService {
                 throw new IllegalArgumentException("Số lượng xuất phải > 0");
             if (d.getQuantity() > onHand) {
                 throw new IllegalStateException(String.format(
-                        "Không đủ tồn cho sản phẩm ID=%d (tồn=%d, yêu cầu xuất=%d)",
-                        d.getProduct().getId(), onHand, d.getQuantity()));
+                        "Không đủ tồn cho sản phẩm ID=%d%s (tồn=%d, yêu cầu xuất=%d)",
+                        d.getProduct().getId(),
+                        productLabel(d), onHand, d.getQuantity()));
             }
         }
         return saveTransactionInTx(em, user, TransactionType.EXPORT, PartnerType.CUSTOMER,
@@ -146,11 +147,40 @@ public class StockService {
                 throw new IllegalArgumentException("Số lượng xuất phải > 0");
             if (d.getQuantity() > onHand) {
                 throw new IllegalStateException(String.format(
-                        "Không đủ tồn cho '%s' (tồn=%d, yêu cầu xuất=%d)",
-                        d.getProduct().getName(), onHand, d.getQuantity()));
+                        "Không đủ tồn cho sản phẩm ID=%d%s (tồn=%d, yêu cầu xuất=%d)",
+                        d.getProduct().getId(),
+                        productLabel(d), onHand, d.getQuantity()));
             }
         }
         return saveTransaction(user, TransactionType.EXPORT, PartnerType.CUSTOMER, customerId, note, details);
+    }
+
+    /**
+     * Lấy tên/SKU sản phẩm để hiển thị trong thông báo lỗi.
+     *
+     * <p>Lưu ý: entity {@code Product} do UI dựng thường chỉ có {@code id}
+     * (dùng {@code em.getReference}), nên các field khác có thể null hoặc chưa
+     * được nạp — gọi {@code getName()} trực tiếp sẽ in ra "null" hoặc ném
+     * LazyInitializationException. Vì vậy phải tự tra lại từ DB trong
+     * EntityManager riêng, và vẫn fallback về id nếu không lấy được.
+     */
+    private String productLabel(StockTransactionDetail d) {
+        Integer pid = d.getProduct().getId();
+        if (pid == null) return "";
+        EntityManager em = HibernateUtil.getEntityManager();
+        try {
+            Product p = em.find(Product.class, pid);
+            if (p == null) return "";
+            String name = p.getName();
+            String sku = p.getSku();
+            if (name == null && sku == null) return "";
+            return " '" + (name != null ? name : "?") + "'" + (sku != null ? " (" + sku + ")" : "");
+        } catch (RuntimeException ex) {
+            log.debug("Không lấy được thông tin sản phẩm {} để hiển thị lỗi", pid, ex);
+            return "";
+        } finally {
+            em.close();
+        }
     }
 
     private StockTransaction saveTransaction(User user, TransactionType type, PartnerType partnerType,

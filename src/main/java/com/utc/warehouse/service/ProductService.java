@@ -41,11 +41,38 @@ public class ProductService {
     }
 
     public void delete(Integer id) {
-        productDAO.findById(id).ifPresent(p ->
-                AuditLogger.log(AuthService.get().getCurrentUser(),
-                        com.utc.warehouse.enums.AuditAction.DELETE, "Product", p.getId(),
-                        p.getSku(), "Xoá sản phẩm " + p.getSku()));
-        productDAO.deleteById(id);
+        Product p = productDAO.findById(id).orElse(null);
+        if (p == null) return;
+
+        // Xoá TRƯỚC, ghi audit log SAU. Nếu ghi log trước mà xoá thất bại
+        // (bị FK chặn) thì audit log sẽ ghi sai là đã xoá sản phẩm.
+        try {
+            productDAO.deleteById(id);
+        } catch (RuntimeException ex) {
+            // MySQL báo lỗi ở tầng driver/commit, Hibernate bọc lại thành
+            // RollbackException khiến message gốc ("foreign key constraint fails")
+            // bị mất. Gỡ ra để hiển thị lỗi có ý nghĩa cho người dùng.
+            String root = rootMessage(ex);
+            throw new IllegalStateException(
+                    "Không thể xóa sản phẩm '" + p.getName() + "' (" + p.getSku() + "') vì "
+                            + "sản phẩm đã có phát sinh dữ liệu trong phiếu nhập, phiếu xuất hoặc hóa đơn. "
+                            + "Hãy đặt trạng thái 'Ngừng kinh doanh' thay vì xóa."
+                            + (root == null ? "" : "\n(Chi tiết: " + root + ")"), ex);
+        }
+
+        AuditLogger.log(AuthService.get().getCurrentUser(),
+                com.utc.warehouse.enums.AuditAction.DELETE, "Product", p.getId(),
+                p.getSku(), "Xoá sản phẩm " + p.getSku());
+    }
+
+    /** Bóc lớp vỏ exception để lấy message gốc từ driver JDBC. */
+    private String rootMessage(Throwable t) {
+        Throwable cur = t;
+        while (cur.getCause() != null && cur.getCause() != cur) cur = cur.getCause();
+        String m = cur.getMessage();
+        if (m == null || m.isBlank()) return null;
+        // Rút gọn thông điệp dài của MySQL cho dễ đọc
+        return m.length() > 220 ? m.substring(0, 220) + "..." : m;
     }
 
     public List<Category> allCategories() { return categoryDAO.findAllOrdered(); }

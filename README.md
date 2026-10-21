@@ -88,6 +88,36 @@ warehouse_management/
     └── logback.xml                             # Logging
 ```
 
+## Đường dẫn lưu trữ file (AppPaths)
+
+Ảnh sản phẩm, file CSV export và backup database được lưu **ngoài DB**, trong các thư mục con
+của thư mục gốc ứng dụng (dò tự động từ `pom.xml` / `.git`, hoặc thư mục cha file `.jar`):
+
+```
+warehouse_management/
+├── exports/          # file CSV xuất từ báo cáo
+├── product_images/   # ảnh sản phẩm (DB chỉ lưu tên file)
+└── backups/          # backup database
+```
+
+Nhờ dò tự động nên **không có đường dẫn tuyệt đối hardcode** — cùng code chạy được trên
+macOS, Windows và Linux. Muốn đổi vị trí lưu trữ, ghi đè qua biến môi trường hoặc system property:
+
+| Mục đích          | Biến môi trường       | System property         |
+|-------------------|-----------------------|-------------------------|
+| Thư mục gốc       | `WAREHOUSE_HOME`      | `-Dwarehouse.home`      |
+| Thư mục export    | `WAREHOUSE_EXPORTS`   | `-Dwarehouse.exports`   |
+| Thư mục ảnh       | `WAREHOUSE_IMAGES`    | `-Dwarehouse.images`    |
+| Thư mục backup    | `WAREHOUSE_BACKUPS`   | `-Dwarehouse.backups`   |
+
+```bash
+# Ví dụ: lưu export sang ổ D: trên Windows
+java -Dwarehouse.exports="D:/warehouse/exports" -jar warehouse.jar
+```
+
+Nếu không dò được thư mục gốc (chạy từ classpath lạ), app lùi về `~/.warehouse_management/`.
+Mọi thư mục con đều được tạo tự động nếu chưa tồn tại.
+
 ## Schema MySQL (tổng quan)
 
 - `users` — người dùng (id, username, password_hash, role, active)

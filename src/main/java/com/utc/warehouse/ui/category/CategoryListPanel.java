@@ -95,7 +95,36 @@ public class CategoryListPanel extends BasePanel {
     protected JComponent buildContent() {
         table = TableUtils.createTable(COLS, new Object[0][]);
         TableUtils.centerColumn(table, 0);
+
+        // Double-click 1 dòng → xem chi tiết danh mục
+        com.utc.warehouse.ui.common.TableDoubleClick.installFor(
+                table, this::categoryAtRow, this::showCategoryDetail);
         return TableUtils.scrollFor(table);
+    }
+
+    /** Tra Category từ model row index (dùng cho double-click). */
+    private Category categoryAtRow(int modelRow) {
+        Object idObj = TableUtils.modelOf(table).getValueAt(modelRow, 0);
+        if (idObj == null) return null;
+        final Integer id;
+        try { id = (idObj instanceof Integer) ? (Integer) idObj : Integer.valueOf(idObj.toString()); }
+        catch (NumberFormatException ex) { return null; }
+        return service.allCategories().stream()
+                .filter(c -> c.getId().equals(id)).findFirst().orElse(null);
+    }
+
+    /** Dialog xem nhanh thông tin danh mục (read-only). */
+    private void showCategoryDetail(Category c) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Mã danh mục: ").append(c.getId()).append('\n');
+        sb.append("Tên: ").append(c.getName()).append('\n');
+        sb.append("Mô tả: ").append(c.getDescription() == null || c.getDescription().isBlank()
+                ? "(trống)" : c.getDescription()).append('\n');
+        JTextArea ta = new JTextArea(sb.toString());
+        ta.setEditable(false);
+        ta.setFont(UIConstants.FONT_NORMAL);
+        JOptionPane.showMessageDialog(this, new JScrollPane(ta),
+                "Chi tiết " + c.getName(), JOptionPane.PLAIN_MESSAGE);
     }
 
     public void reload() { reloadFiltered(""); }

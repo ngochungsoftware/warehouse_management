@@ -343,7 +343,10 @@ public class MainFrame extends JFrame {
         menuOrder.add(label);
         keyToCard.put(label, label);
         contentPanel.add(panel, label);
-        if (panel instanceof com.utc.warehouse.ui.common.BasePanel bp) bp.init();
+        if (panel instanceof com.utc.warehouse.ui.common.BasePanel bp) {
+            bp.init();
+            bp.reloadDataOnShow(); // Auto-load data khi panel lần đầu hiển thị
+        }
         // Bind Ctrl+9 cho menu cuối (thường là User Management, nếu có)
         int idx = menuOrder.size(); // 1-based sau khi add
         if (idx <= 9) {

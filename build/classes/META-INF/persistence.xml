@@ -5,14 +5,10 @@
                                  https://jakarta.ee/xml/ns/persistence/persistence_3_1.xsd"
              version="3.1">
 
-    <!--
-        Thông tin kết nối DB đã được gán cứng.
-        Đổi user/password tại đây nếu MySQL của bạn dùng tài khoản khác.
-    -->
+
     <persistence-unit name="warehousePU" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
 
-        <!-- List entity classes (Hibernate 6 có thể auto-detect qua <exclude-unlisted-classes>false/>) -->
         <class>com.utc.warehouse.entity.User</class>
         <class>com.utc.warehouse.entity.Category</class>
         <class>com.utc.warehouse.entity.Product</class>
@@ -31,14 +27,12 @@
         <exclude-unlisted-classes>false</exclude-unlisted-classes>
 
         <properties>
-            <!-- JDBC -->
             <property name="jakarta.persistence.jdbc.url"
                       value="jdbc:mysql://localhost:3306/warehouse_db?useUnicode=true&amp;characterEncoding=utf8&amp;useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=Asia/Ho_Chi_Minh&amp;createDatabaseIfNotExist=true"/>
             <property name="jakarta.persistence.jdbc.user"      value="root"/>
             <property name="jakarta.persistence.jdbc.password"  value="example_123"/>
             <property name="jakarta.persistence.jdbc.driver"    value="com.mysql.cj.jdbc.Driver"/>
 
-            <!-- Hibernate -->
             <property name="hibernate.dialect"                 value="org.hibernate.dialect.MySQLDialect"/>
             <property name="hibernate.show_sql"                 value="false"/>
             <property name="hibernate.format_sql"               value="true"/>

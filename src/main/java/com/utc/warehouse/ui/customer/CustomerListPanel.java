@@ -70,7 +70,37 @@ public class CustomerListPanel extends BasePanel {
     protected JComponent buildContent() {
         table = TableUtils.createTable(COLS, new Object[0][]);
         TableUtils.centerColumn(table, 0);
+
+        // Double-click 1 dòng → xem chi tiết khách hàng
+        com.utc.warehouse.ui.common.TableDoubleClick.installFor(
+                table, this::customerAtRow, this::showCustomerDetail);
         return TableUtils.scrollFor(table);
+    }
+
+    /** Tra Customer từ model row index (dùng cho double-click). */
+    private Customer customerAtRow(int modelRow) {
+        Object idObj = TableUtils.modelOf(table).getValueAt(modelRow, 0);
+        if (idObj == null) return null;
+        final Integer id;
+        try { id = (idObj instanceof Integer) ? (Integer) idObj : Integer.valueOf(idObj.toString()); }
+        catch (NumberFormatException ex) { return null; }
+        return service.allCustomers().stream()
+                .filter(s -> s.getId().equals(id)).findFirst().orElse(null);
+    }
+
+    /** Dialog xem nhanh thông tin khách hàng (read-only). */
+    private void showCustomerDetail(Customer c) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Mã: ").append(c.getId()).append('\n');
+        sb.append("Tên: ").append(c.getName()).append('\n');
+        sb.append("SĐT: ").append(c.getPhone() == null || c.getPhone().isBlank() ? "(trống)" : c.getPhone()).append('\n');
+        sb.append("Email: ").append(c.getEmail() == null || c.getEmail().isBlank() ? "(trống)" : c.getEmail()).append('\n');
+        sb.append("Địa chỉ: ").append(c.getAddress() == null || c.getAddress().isBlank() ? "(trống)" : c.getAddress()).append('\n');
+        JTextArea ta = new JTextArea(sb.toString());
+        ta.setEditable(false);
+        ta.setFont(UIConstants.FONT_NORMAL);
+        JOptionPane.showMessageDialog(this, new JScrollPane(ta),
+                "Chi tiết " + c.getName(), JOptionPane.PLAIN_MESSAGE);
     }
 
     public void reload() {

@@ -139,14 +139,31 @@ public class ImportPanel extends BasePanel {
 
     private void loadSuppliers() {
         cbSupplier.removeAllItems();
+
+        // Mục placeholder, id = -1, name = "(Chọn NCC)". KHÔNG lưu được
+        // vào DB vì createImport sẽ bỏ qua null.
+        Supplier placeholder = new Supplier();
+        placeholder.setId(-1);
+        placeholder.setName("(Chọn NCC)");
+        cbSupplier.addItem(placeholder);
+
         List<Supplier> list = partnerService.allSuppliers();
         for (Supplier s : list) cbSupplier.addItem(s);
+
+        cbSupplier.setSelectedItem(placeholder);   // mặc định CHƯA chọn NCC
         cbSupplier.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index,
                                                           boolean isSelected, boolean cellHasFocus) {
                 JLabel l = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                l.setText(value == null ? "(Chọn NCC)" : ((Supplier) value).getName());
+                Supplier s = (value instanceof Supplier) ? (Supplier) value : null;
+                if (s == null) {
+                    l.setText("(Chọn NCC)");
+                } else if (s.getId() != null && s.getId() == -1) {
+                    l.setText("(Chọn NCC)");  // placeholder
+                } else {
+                    l.setText(s.getName());
+                }
                 return l;
             }
         });
@@ -221,11 +238,13 @@ public class ImportPanel extends BasePanel {
 
     private void saveTransaction() {
         if (details.isEmpty()) { JOptionPane.showMessageDialog(this, "Phiếu phải có ít nhất 1 sản phẩm."); return; }
-        Supplier sup = (Supplier) cbSupplier.getSelectedItem();
         User u = AuthService.get().getCurrentUser();
         if (u == null) { JOptionPane.showMessageDialog(this, "Phiên đăng nhập đã hết."); return; }
+
+        Supplier sup = (Supplier) cbSupplier.getSelectedItem();
+        Integer supId = (sup == null || sup.getId() != null && sup.getId() == -1) ? null : sup.getId();
         try {
-            stockService.createImport(u, sup == null ? null : sup.getId(), txtNote.getText().trim(), new ArrayList<>(details));
+            stockService.createImport(u, supId, txtNote.getText().trim(), new ArrayList<>(details));
             JOptionPane.showMessageDialog(this, "Lưu phiếu nhập thành công!");
             details.clear(); reloadTable(); txtNote.setText("");
         } catch (Exception ex) {

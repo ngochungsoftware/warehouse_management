@@ -33,11 +33,20 @@ public class ProductViewDialog extends JDialog {
         setLocationRelativeTo(owner);
         setLayout(new BorderLayout());
 
-        add(buildHeader(), BorderLayout.NORTH);
-        add(buildBody(),   BorderLayout.CENTER);
-        add(buildFooter(), BorderLayout.SOUTH);
+        try {
+            add(buildHeader(), BorderLayout.NORTH);
+            add(buildBody(),   BorderLayout.CENTER);
+            add(buildFooter(), BorderLayout.SOUTH);
 
-        loadImage();
+            loadImage();
+        } catch (Throwable t) {
+            t.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Không mở được chi tiết sản phẩm:\n"
+                            + t.getClass().getSimpleName() + "\n" + t.getMessage(),
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+            dispose();
+        }
     }
 
     /* ==================== Header ==================== */

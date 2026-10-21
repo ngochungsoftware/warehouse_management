@@ -102,6 +102,9 @@ public class PurchaseOrderPanel extends BasePanel {
         TableUtils.centerColumn(table, 4);
         TableUtils.centerColumn(table, 6);
         TableUtils.rightColumn(table, 5);
+
+        // Double-click 1 dòng → mở chi tiết đơn đặt hàng
+        com.utc.warehouse.ui.common.TableDoubleClick.installOn(table, r -> onView());
         return TableUtils.scrollFor(table);
     }
 
