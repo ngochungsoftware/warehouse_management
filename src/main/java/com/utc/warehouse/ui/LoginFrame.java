@@ -153,8 +153,12 @@ public class LoginFrame extends JFrame {
         btnExit.setBorder(BorderFactory.createEmptyBorder(6, 0, 6, 0));
         btnExit.addActionListener(e -> HibernateShutdown.shutdownAndExit(0));
 
-        JLabel hint = new JLabel("<html><div style='text-align:center; color:#94A3B8; font-size:11px; margin-top:12px'>" +
-                "Mặc định: <b>admin/admin123</b> hoặc <b>staff/staff123</b></div></html>");
+        // Không gợi ý tài khoản/mật khẩu mặc định trên màn hình — hiển thị
+        // mật khẩu ở đây khiến bất kỳ ai mở app cũng đăng nhập được vào
+        // tài khoản admin. Xem README mục "Tài khoản mặc định" để biết
+        // thông tin ban đầu và nên đổi mật khẩu ngay sau lần đăng nhập đầu.
+        JLabel hint = new JLabel("<html><div style='text-align:center; color:#94A3B8; font-size:11px; margin-top:12px'>"
+                + "Liên hệ quản trị viên nếu quên mật khẩu</div></html>");
         hint.setAlignmentX(Component.LEFT_ALIGNMENT);
         hint.setBorder(BorderFactory.createEmptyBorder(18, 0, 0, 0));
         hint.setHorizontalAlignment(SwingConstants.CENTER);

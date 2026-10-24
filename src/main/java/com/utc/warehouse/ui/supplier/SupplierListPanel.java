@@ -28,7 +28,7 @@ public class SupplierListPanel extends BasePanel {
         JButton btnEdit   = secondaryButton("Sửa");
         JButton btnDelete = dangerButton("Xóa");
         JButton btnRefresh = secondaryButton("Làm mới");
-        JButton btnExport = secondaryButton("Xuất CSV");
+        JButton btnExport = secondaryButton("Xuất Excel");
         bar.add(btnRefresh); bar.add(btnExport); bar.add(btnAdd); bar.add(btnEdit); bar.add(btnDelete);
 
         btnAdd.addActionListener(e    -> { SupplierDialog d = new SupplierDialog(SwingUtilities.getWindowAncestor(this), null); d.setVisible(true); if (d.isSaved()) reload(); });
@@ -55,7 +55,7 @@ public class SupplierListPanel extends BasePanel {
         sc.bind("ctrl E", "edit",   this::onShortcutEdit,   "Sửa NCC");
         sc.bind("DELETE", "delete", this::onShortcutDelete, "Xoá NCC");
         sc.bind("F5",     "refresh",this::onShortcutRefresh,"Làm mới");
-        sc.bind("ctrl X", "export", () -> com.utc.warehouse.ui.common.TableExportHelper.exportCurrentTable(table, "nha_cung_cap"), "Xuất CSV");
+        sc.bind("ctrl X", "export", () -> com.utc.warehouse.ui.common.TableExportHelper.exportCurrentTable(table, "nha_cung_cap"), "Xuất Excel");
     }
 
     private JButton findButtonByName(String name) {

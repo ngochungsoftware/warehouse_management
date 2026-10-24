@@ -1,14 +1,14 @@
 package com.utc.warehouse.ui.common;
 
-import com.utc.warehouse.util.CsvExporter;
+import com.utc.warehouse.util.ExcelExporter;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import java.io.File;
 
 /**
- * Helper để các panel xuất CSV nhanh. Gọi {@link #exportCurrentTable} từ nút "Xuất CSV".
+ * Helper để các panel xuất Excel (.xlsx) nhanh.
+ * Gọi {@link #exportCurrentTable} từ nút "Xuất Excel".
  */
 public final class TableExportHelper {
 
@@ -21,12 +21,12 @@ public final class TableExportHelper {
 
     /** Xuất với bảng phụ (vd đã lọc bớt cột ảnh). */
     public static void exportModel(TableModel m, JComponent parent, String name) {
-        File out = CsvExporter.exportTable(new JTable(m), name);
+        File out = ExcelExporter.exportTable(new JTable(m), name);
         notifyOk(parent, out, m.getRowCount());
     }
 
     private static void export(TableModel m, JComponent parent, String name) {
-        File out = CsvExporter.exportTable(new JTable(m), name);
+        File out = ExcelExporter.exportTable(new JTable(m), name);
         notifyOk(parent, out, m.getRowCount());
     }
 

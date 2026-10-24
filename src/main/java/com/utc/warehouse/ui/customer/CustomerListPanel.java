@@ -28,7 +28,7 @@ public class CustomerListPanel extends BasePanel {
         JButton btnEdit = secondaryButton("Sửa");
         JButton btnDelete = dangerButton("Xóa");
         JButton btnRefresh = secondaryButton("Làm mới");
-        JButton btnExport = secondaryButton("Xuất CSV");
+        JButton btnExport = secondaryButton("Xuất Excel");
         bar.add(btnRefresh); bar.add(btnExport); bar.add(btnAdd); bar.add(btnEdit); bar.add(btnDelete);
 
         btnAdd.addActionListener(e -> { CustomerDialog d = new CustomerDialog(SwingUtilities.getWindowAncestor(this), null); d.setVisible(true); if (d.isSaved()) reload(); });
@@ -55,7 +55,7 @@ public class CustomerListPanel extends BasePanel {
         sc.bind("ctrl E", "edit",   this::onShortcutEdit,   "Sửa KH");
         sc.bind("DELETE", "delete", this::onShortcutDelete, "Xoá KH");
         sc.bind("F5",     "refresh",this::onShortcutRefresh,"Làm mới");
-        sc.bind("ctrl X", "export", () -> com.utc.warehouse.ui.common.TableExportHelper.exportCurrentTable(table, "khach_hang"), "Xuất CSV");
+        sc.bind("ctrl X", "export", () -> com.utc.warehouse.ui.common.TableExportHelper.exportCurrentTable(table, "khach_hang"), "Xuất Excel");
     }
 
     private JButton findButtonByName(String name) {

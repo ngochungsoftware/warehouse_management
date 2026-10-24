@@ -274,6 +274,55 @@ public class FinanceReportDAO {
         }
     }
 
+    /* ============== Tồn kho theo danh mục (cho pie chart) ============== */
+
+    /**
+     * Tổng số lượng tồn theo danh mục — dùng cho pie chart.
+     *
+     * <p>Cùng công thức tồn với {@code ReportDAO}: SUM(nhập) - SUM(xuất).
+     * Chỉ trả về danh mục có tồn > 0 để pie chart không có lát "0".
+     */
+    public List<CategoryStockRow> inventoryByCategory() {
+        EntityManager em = HibernateUtil.getEntityManager();
+        try {
+            @SuppressWarnings("unchecked")
+            List<Object[]> rows = em.createQuery(
+                    "SELECT c.name, " +
+                            " COALESCE(SUM(CASE WHEN t.type = com.utc.warehouse.enums.TransactionType.IMPORT " +
+                            "                  THEN d.quantity ELSE -d.quantity END), 0) " +
+                            "FROM Product p " +
+                            "LEFT JOIN p.category c " +
+                            "LEFT JOIN StockTransactionDetail d ON d.product = p " +
+                            "LEFT JOIN d.transaction t " +
+                            "WHERE p.active = TRUE " +
+                            "GROUP BY c.name")
+                    .getResultList();
+
+            List<CategoryStockRow> out = new ArrayList<>();
+            for (Object[] r : rows) {
+                String name = r[0] == null ? "(Chưa phân loại)" : (String) r[0];
+                long qty = ((Number) r[1]).longValue();
+                if (qty > 0) out.add(new CategoryStockRow(name, qty));
+            }
+            // Sắp xếp giảm dần theo tồn — làm ở Java vì HQL không ổn định với
+            // ORDER BY theo biểu thức aggregate CASE.
+            out.sort((a, b) -> Long.compare(b.quantity, a.quantity));
+            return out;
+        } finally {
+            em.close();
+        }
+    }
+
+    public static final class CategoryStockRow {
+        public final String categoryName;
+        public final long quantity;
+        public CategoryStockRow(String n, long q) { this.categoryName = n; this.quantity = q; }
+        public String getCategoryName() { return categoryName; }
+        public long getQuantity() { return quantity; }
+    }
+
+    /* ============== Nhập/Xuất theo ngày (cho stacked bar) ============== */
+
     private static BigDecimal toBig(Object o) {
         if (o == null) return BigDecimal.ZERO;
         if (o instanceof BigDecimal bd) return bd;

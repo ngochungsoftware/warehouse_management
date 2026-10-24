@@ -82,6 +82,12 @@ public class VerifyTest19 {
         long detailCount = countDetails(pid);
         System.out.println("    So dong stock_transaction_details con tro toi SP = " + detailCount);
 
+        /* Assert: DB phai BAO VEE du lieu — khong duoc xoa san pham dang co lich su kho. */
+        check("Khong xoa san pham dang co lich su kho", !deleted,
+                deleted ? "san pham bi xoa — mat lich su" : "FK chan xoa, du lieu duoc giu");
+        check("Ton kho duoc giu nguyen", onHand == 50, "onHand = " + onHand + " (mong doi 50)");
+        check("Lich su phieu duoc giu nguyen", detailCount > 0, "so dong con lai = " + detailCount);
+
         System.out.println("\n=== KET LUAN ===");
         if (crashed) {
             System.out.println("    XOA BI LOI (nhin chung la an toan - du lieu duoc giu):");

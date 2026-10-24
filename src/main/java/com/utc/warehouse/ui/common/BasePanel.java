@@ -18,6 +18,16 @@ public class BasePanel extends JPanel {
     /** Subclass set true để cho phép F5 reload, Ctrl+N add, Del delete, ... */
     protected boolean enableDefaultShortcuts = true;
 
+    /**
+     * Subclass set true để nội dung dài được cuộn bằng chuột.
+     *
+     * <p>Mặc định false: các màn bảng đã có {@code JScrollPane} riêng quanh
+     * bảng, bọc thêm ở ngoài sẽ tạo 2 thanh cuộn lồng nhau và con lăn chuột
+     * bị "kẹt". Chỉ bật cho màn dạng dashboard — nội dung cao cố định
+     * (KPI + chart) và bị cắt mất khi thu nhỏ cửa sổ.
+     */
+    protected boolean scrollContent = false;
+
     public BasePanel(String title) { this(title, null); }
 
     public BasePanel(String title, String subtitle) {
@@ -87,13 +97,34 @@ public class BasePanel extends JPanel {
         if (content != null) contentCard.add(content, BorderLayout.CENTER);
 
         add(north, BorderLayout.NORTH);
-        add(contentCard, BorderLayout.CENTER);
+        add(scrollContent ? wrapScrollable(contentCard) : contentCard, BorderLayout.CENTER);
         if (footer != null) add(footer, BorderLayout.SOUTH);
 
         if (enableDefaultShortcuts) installDefaultShortcuts();
 
         // Subclass có thể override reloadDataOnShow() để auto-load khi panel
         // lần đầu được hiển thị. Mặc định gọi reload().
+    }
+
+    /**
+     * Bọc component trong {@link JScrollPane} để cuộn được bằng chuột khi
+     * nội dung cao hơn khung cửa sổ.
+     *
+     * <p>Bỏ thanh cuộn ngang (chiều ngang đã vừa khung) và cho bánh xe chuột
+     * cuộn chính là bảng khi đang đặt con trỏ lên vùng có scroll riêng.
+     */
+    private JComponent wrapScrollable(JComponent inner) {
+        JScrollPane sp = new JScrollPane(inner);
+        sp.setBorder(BorderFactory.createEmptyBorder());
+        sp.setOpaque(false);
+        sp.getViewport().setOpaque(false);
+        // Dashboard nền trắng — không đổi màu nền viewport để tránh dải lệch tone.
+        sp.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+
+        // Cuộn 1 "page" bằng 1/10 chiều cao viewport, gần với cảm giác lăn chuột
+        // của trình duyệt; mặc định JScrollPane lăn cả trang khiến nhảy quá đà.
+        sp.getVerticalScrollBar().setUnitIncrement(16);
+        return sp;
     }
 
     /** Được gọi 1 lần sau init() để load dữ liệu ban đầu. Mặc định gọi reload(). */

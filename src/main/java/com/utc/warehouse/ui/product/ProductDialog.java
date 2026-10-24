@@ -60,6 +60,16 @@ public class ProductDialog extends JDialog {
         List<Category> cats = service.allCategories();
         cbCategory.addItem(null);
         for (Category c : cats) cbCategory.addItem(c);
+//        if (original != null && original.getCategory() != null) {
+//            Integer categoryId = original.getCategory().getId();
+//
+//            for (Category c : cats) {
+//                if (c.getId().equals(categoryId)) {
+//                    cbCategory.setSelectedItem(c);
+//                    break;
+//                }
+//            }
+//        }
         cbCategory.setRenderer(new DefaultListCellRenderer() {
             @Override public Component getListCellRendererComponent(JList<?> list, Object value, int index,
                                                                     boolean isSelected, boolean cellHasFocus) {
@@ -113,8 +123,8 @@ public class ProductDialog extends JDialog {
         c.gridx = 0; c.gridy = row; c.gridwidth = 2;
         JPanel priceRow = new JPanel(new GridLayout(1, 3, 8, 0));
         priceRow.setOpaque(false);
-        priceRow.add(buildField("Giá bán (VNĐ)", txtSalePrice));
-        priceRow.add(buildField("Giá vốn (VNĐ)", txtCostPrice));
+        priceRow.add(buildField("Giá bán (đ)", txtSalePrice));
+        priceRow.add(buildField("Giá vốn (đ)", txtCostPrice));
         priceRow.add(buildField("VAT %", txtVatRate));
         form.add(priceRow, c);
         row++;
@@ -199,7 +209,21 @@ public class ProductDialog extends JDialog {
     private void fillFromOriginal() {
         txtSku.setText(original.getSku());
         txtName.setText(original.getName());
-        cbCategory.setSelectedItem(original.getCategory());
+//        cbCategory.setSelectedItem(original.getCategory());
+        Category selectedCategory = original.getCategory();
+
+        if (selectedCategory != null) {
+            for (int i = 0; i < cbCategory.getItemCount(); i++) {
+                Category c = cbCategory.getItemAt(i);
+
+                if (c != null && c.getId().equals(selectedCategory.getId())) {
+                    cbCategory.setSelectedIndex(i);
+                    break;
+                }
+            }
+        } else {
+            cbCategory.setSelectedItem(null);
+        }
         txtUnit.setText(original.getUnit());
         txtSalePrice.setText(original.getSalePrice() == null ? "0" : original.getSalePrice().toPlainString());
         txtCostPrice.setText(original.getCostPrice() == null ? "0" : original.getCostPrice().toPlainString());
@@ -313,7 +337,7 @@ public class ProductDialog extends JDialog {
             BigDecimal profit = sale.subtract(cost);
             BigDecimal margin = sale.signum() == 0 ? BigDecimal.ZERO
                     : profit.multiply(BigDecimal.valueOf(100)).divide(sale, 2, RoundingMode.HALF_UP);
-            lblProfit.setText(String.format("💰 Lợi nhuận đơn vị: %s đ   |   Biên LN: %s %%",
+            lblProfit.setText(String.format("💰 Lợi nhuận đơn vị: %s   |   Biên LN: %s %%",
                     MoneyFormat.format(profit),
                     margin.toPlainString()));
             lblProfit.setForeground(profit.signum() >= 0 ? Theme.BRAND : Theme.DANGER);

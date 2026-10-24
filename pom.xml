@@ -25,6 +25,7 @@
         <logback.version>1.5.6</logback.version>
         <jakarta.persistence.version>3.1.0</jakarta.persistence.version>
         <flatlaf.version>3.4</flatlaf.version>
+        <poi.version>5.2.5</poi.version>
     </properties>
 
     <dependencies>
@@ -40,6 +41,16 @@
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-core</artifactId>
             <version>${hibernate.version}</version>
+            <exclusions>
+                <!-- Dự án dùng Logback làm backend cho SLF4J. Log4j-api kéo
+                     theo sẽ in cảnh báo "Log4j2 could not find a logging
+                     implementation" mỗi lần chạy app, vì không có log4j-core
+                     (và không cần). Loại bỏ hoàn toàn. -->
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- BCrypt để hash mật khẩu -->
@@ -71,6 +82,20 @@
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf-intellij-themes</artifactId>
             <version>${flatlaf.version}</version>
+        </dependency>
+
+        <!-- Apache POI: xuất báo cáo ra file Excel (.xlsx) -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+
+        <!-- JFreeChart: vẽ biểu đồ (doanh thu, tồn kho, top SP...) -->
+        <dependency>
+            <groupId>org.jfree</groupId>
+            <artifactId>jfreechart</artifactId>
+            <version>1.5.5</version>
         </dependency>
 
         <!-- Test -->

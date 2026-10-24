@@ -54,7 +54,7 @@ public class RevenueReportPanel extends BasePanel {
 
         JButton btnApply = primaryButton("Xem");
         JButton btnRefresh = secondaryButton("Làm mới");
-        JButton btnExport = secondaryButton("Xuất CSV");
+        JButton btnExport = secondaryButton("Xuất Excel");
         btnApply.setName("btnApply");
         btnRefresh.setName("btnRefresh");
         btnExport.setName("btnExport");
@@ -64,7 +64,7 @@ public class RevenueReportPanel extends BasePanel {
 
         btnApply.addActionListener(e -> reload());
         btnRefresh.addActionListener(e -> reload());
-        btnExport.addActionListener(e -> exportCSV());
+        btnExport.addActionListener(e -> exportExcel());
         cbRange.addActionListener(e -> applyPreset());
 
         return bar;
@@ -155,7 +155,7 @@ public class RevenueReportPanel extends BasePanel {
                                     .divide(sumNet, 2, java.math.RoundingMode.HALF_UP).toPlainString() + "%"
             });
             lblSummary.setText(String.format(
-                    "Tổng: %d hóa đơn  |  Doanh thu: %s đ  |  Lợi nhuận: %s đ  |  Margin TB: %s",
+                    "Tổng: %d hóa đơn  |  Doanh thu: %s  |  Lợi nhuận: %s  |  Margin TB: %s",
                     totalInv, MoneyFormat.format(sumNet), MoneyFormat.format(sumProfit),
                     sumNet.signum() == 0 ? "0%" :
                             sumProfit.multiply(java.math.BigDecimal.valueOf(100))
@@ -165,24 +165,10 @@ public class RevenueReportPanel extends BasePanel {
         }
     }
 
-    private void exportCSV() {
-        JFileChooser fc = new JFileChooser();
-        fc.setSelectedFile(new java.io.File("doanh_thu_" + LocalDate.now() + ".csv"));
-        if (fc.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
-        try (java.io.PrintWriter pw = new java.io.PrintWriter(
-                new java.io.OutputStreamWriter(new java.io.FileOutputStream(fc.getSelectedFile()),
-                        java.nio.charset.StandardCharsets.UTF_8))) {
-            pw.println('\ufeff'); // BOM cho Excel
-            for (int c = 0; c < COLS.length; c++) pw.print("\"" + COLS[c] + "\"" + (c == COLS.length - 1 ? "\n" : ","));
-            for (int r = 0; r < model.getRowCount(); r++) {
-                for (int c = 0; c < COLS.length; c++) {
-                    Object v = model.getValueAt(r, c);
-                    pw.print("\"" + (v == null ? "" : v) + "\"" + (c == COLS.length - 1 ? "\n" : ","));
-                }
-            }
-            JOptionPane.showMessageDialog(this, "Đã xuất: " + fc.getSelectedFile().getName());
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Lỗi xuất: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+    private void exportExcel() {
+        java.io.File out = com.utc.warehouse.util.ExcelExporter.exportTable(table, "doanh_thu");
+        if (out != null) {
+            JOptionPane.showMessageDialog(this, "Đã xuất: " + out.getAbsolutePath());
         }
     }
 
@@ -191,7 +177,7 @@ public class RevenueReportPanel extends BasePanel {
         com.utc.warehouse.ui.common.ShortcutManager sc = new com.utc.warehouse.ui.common.ShortcutManager(this);
         sc.bind("F5",     "refresh", this::reload, "Làm mới báo cáo");
         sc.bind("ENTER",  "apply",   this::reload, "Áp dụng bộ lọc");
-        sc.bind("ctrl E", "export",  this::exportCSV, "Xuất CSV");
+        sc.bind("ctrl E", "export",  this::exportExcel, "Xuất Excel");
     }
 
     private JButton primaryButton(String t) {

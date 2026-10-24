@@ -77,7 +77,7 @@ public class DebtReportPanel extends BasePanel {
             model.addRow(new Object[]{
                     "", "TỔNG CỘNG", "", "", "", MoneyFormat.format(totalDebt)
             });
-            lblTotal.setText("Tổng công nợ: " + MoneyFormat.format(totalDebt) + " đ  |  " + rows.size() + " khách hàng");
+            lblTotal.setText("Tổng công nợ: " + MoneyFormat.format(totalDebt) + "  |  " + rows.size() + " khách hàng");
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Lỗi: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
         }

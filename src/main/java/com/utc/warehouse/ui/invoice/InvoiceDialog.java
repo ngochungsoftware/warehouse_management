@@ -123,11 +123,11 @@ public class InvoiceDialog extends JDialog {
         m.gridx = 1; m.weightx = 1; addPanel.add(cbProduct, m);
         m.gridx = 0; m.gridy = 1; m.weightx = 0; addPanel.add(new JLabel("Số lượng:"), m);
         m.gridx = 1; addPanel.add(txtQty, m);
-        m.gridx = 0; m.gridy = 2; addPanel.add(new JLabel("Đơn giá (VNĐ):"), m);
+        m.gridx = 0; m.gridy = 2; addPanel.add(new JLabel("Đơn giá (đ):"), m);
         m.gridx = 1; addPanel.add(txtUnitPrice, m);
         m.gridx = 0; m.gridy = 3; addPanel.add(new JLabel("VAT %:"), m);
         m.gridx = 1; addPanel.add(txtVat, m);
-        m.gridx = 0; m.gridy = 4; addPanel.add(new JLabel("Chiết khấu (VNĐ):"), m);
+        m.gridx = 0; m.gridy = 4; addPanel.add(new JLabel("Chiết khấu (đ):"), m);
         m.gridx = 1; addPanel.add(txtDiscount, m);
         m.gridx = 0; m.gridy = 5; m.gridwidth = 2; m.anchor = GridBagConstraints.CENTER;
         JButton btnAddLine = new JButton("+ Thêm dòng");
@@ -219,9 +219,9 @@ public class InvoiceDialog extends JDialog {
                 profitSum = profitSum.add(lineTotal.subtract(lineCogs));
                 totalSum = totalSum.add(lineTotal);
             }
-            cogs.setText(MoneyFormat.format(cogsSum) + " đ");
-            profit.setText(MoneyFormat.format(profitSum) + " đ");
-            total.setText(MoneyFormat.format(totalSum) + " đ");
+            cogs.setText(MoneyFormat.format(cogsSum));
+            profit.setText(MoneyFormat.format(profitSum));
+            total.setText(MoneyFormat.format(totalSum));
         };
         // wire update when adding/removing
         addPanel.putClientProperty("refreshTotals", refreshTotals);
@@ -322,7 +322,7 @@ public class InvoiceDialog extends JDialog {
                     txtNote.getText().trim(),
                     drafts);
             JOptionPane.showMessageDialog(this,
-                    "Đã tạo hóa đơn " + inv.getCode() + "!\nTổng: " + MoneyFormat.format(inv.getTotal()) + " đ");
+                    "Đã tạo hóa đơn " + inv.getCode() + "!\nTổng: " + MoneyFormat.format(inv.getTotal()));
             saved = true;
             dispose();
         } catch (Exception ex) {

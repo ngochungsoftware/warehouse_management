@@ -133,44 +133,8 @@ public class TransactionHistoryPanel extends BasePanel {
             return;
         }
 
-        // Hiển thị bằng 1 dialog đẹp hơn
-        JTextArea area = new JTextArea(20, 70);
-        area.setEditable(false);
-        area.setFont(UIConstants.FONT_NORMAL);
-        StringBuilder sb = new StringBuilder();
-        sb.append("Phiếu #").append(t.getId())
-                .append("  -  ").append(t.getType())
-                .append("  -  ").append(DateFormatUtil.format(t.getCreatedAt()))
-                .append("\nNgười tạo: ").append(t.getUser() == null ? "(không rõ)" : t.getUser().getUsername())
-                .append("   Ghi chú: ").append(t.getNote() == null ? "" : t.getNote())
-                .append("\n\n");
-        sb.append(String.format("%-6s %-10s %-30s %6s %12s %14s%n",
-                "ID SP", "SKU", "Tên SP", "SL", "Đơn giá", "Thành tiền"));
-        BigDecimal total = BigDecimal.ZERO;
-        int line = 0;
-        if (t.getDetails() != null) {
-            for (StockTransactionDetail d : t.getDetails()) {
-                line++;
-                String name = d.getProduct() == null ? "(sản phẩm đã xoá)" : d.getProduct().getName();
-                String sku  = d.getProduct() == null ? "—" : d.getProduct().getSku();
-                Integer pid = d.getProduct() == null ? null : d.getProduct().getId();
-                sb.append(String.format("%-6s %-10s %-30s %6d %12s %14s%n",
-                        pid == null ? "—" : pid.toString(),
-                        sku,
-                        truncate(name, 30),
-                        d.getQuantity() == null ? 0 : d.getQuantity(),
-                        MoneyFormat.format(d.getUnitPrice()),
-                        MoneyFormat.format(d.getLineTotal())));
-                total = total.add(d.getLineTotal() == null ? BigDecimal.ZERO : d.getLineTotal());
-            }
-        }
-        sb.append("\nSố dòng: ").append(line);
-        sb.append("\nTỔNG:    ").append(MoneyFormat.format(total));
-        area.setText(sb.toString());
-        area.setCaretPosition(0);
-
-        JOptionPane.showMessageDialog(this, new JScrollPane(area),
-                "Chi tiết phiếu #" + t.getId(), JOptionPane.PLAIN_MESSAGE);
+        com.utc.warehouse.ui.common.DetailDialogs.showTransactionDetail(
+                SwingUtilities.getWindowAncestor(this), t);
     }
 
     /** Parse an toàn ID từ cột "Mã phiếu" (định dạng "#5") hoặc từ cột "#" (idx). */
@@ -186,11 +150,6 @@ public class TransactionHistoryPanel extends BasePanel {
         } catch (NumberFormatException ignored) { }
         // Fallback: dùng 1 cột khác? Không có, trả null.
         return null;
-    }
-
-    private static String truncate(String s, int max) {
-        if (s == null) return "";
-        return s.length() <= max ? s : s.substring(0, max - 1) + "…";
     }
 
     private JButton primaryButton(String t)   { return styleButton(t, UIConstants.PRIMARY, Color.WHITE); }

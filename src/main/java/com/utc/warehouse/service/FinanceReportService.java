@@ -24,4 +24,9 @@ public class FinanceReportService {
     public FinanceReportDAO.DashboardSummary dashboardSummary() {
         return dao.dashboardSummary();
     }
+
+    /** Tổng số lượng tồn theo danh mục — dùng cho pie chart trên dashboard. */
+    public List<FinanceReportDAO.CategoryStockRow> inventoryByCategory() {
+        return dao.inventoryByCategory();
+    }
 }

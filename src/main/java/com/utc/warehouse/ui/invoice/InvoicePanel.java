@@ -44,7 +44,7 @@ public class InvoicePanel extends BasePanel {
         JButton btnPay = secondaryButton("Ghi nhận thu tiền");
         JButton btnRefresh = secondaryButton("Làm mới");
         JButton btnCancel = dangerButton("Hủy hóa đơn");
-        JButton btnExport = secondaryButton("Xuất CSV");
+        JButton btnExport = secondaryButton("Xuất Excel");
         btnNew.setName("btnNew");
         btnView.setName("btnView");
         btnPay.setName("btnPay");
@@ -75,7 +75,7 @@ public class InvoicePanel extends BasePanel {
         sc.bind("ctrl D", "detail",  this::onView,     "Xem chi tiết");
         sc.bind("ctrl P", "pay",     this::onPay,      "Ghi nhận thu tiền");
         sc.bind("F5",     "refresh", this::reload,     "Làm mới");
-        sc.bind("ctrl X", "export",  () -> com.utc.warehouse.ui.common.TableExportHelper.exportCurrentTable(table, "hoa_don"), "Xuất CSV");
+        sc.bind("ctrl X", "export",  () -> com.utc.warehouse.ui.common.TableExportHelper.exportCurrentTable(table, "hoa_don"), "Xuất Excel");
     }
 
     @Override

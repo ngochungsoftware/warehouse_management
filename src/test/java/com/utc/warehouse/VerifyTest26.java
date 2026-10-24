@@ -58,7 +58,7 @@ public class VerifyTest26 {
 
         // --- 6) Ghi file that vao thu muc mac dinh ---
         Path e2 = AppPaths.getExportDir();
-        Path probe = e2.resolve("verify_test26.csv");
+        Path probe = e2.resolve("verify_test26.xlsx");
         Files.writeString(probe, "\"MaSP\",\"TenSP\"\n\"P01\",\"Giay\"\n");
         if (Files.exists(probe) && Files.size(probe) > 0) {
             pass++;

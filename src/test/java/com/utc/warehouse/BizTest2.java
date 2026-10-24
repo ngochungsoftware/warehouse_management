@@ -4,7 +4,7 @@ import com.utc.warehouse.entity.Product;
 import com.utc.warehouse.service.ProductService;
 import com.utc.warehouse.service.ImageService;
 import com.utc.warehouse.util.AppPaths;
-import com.utc.warehouse.util.CsvExporter;
+import com.utc.warehouse.util.ExcelExporter;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -21,7 +21,7 @@ import java.nio.file.Path;
 import java.util.Set;
 
 /**
- * BizTest: kiểm tra nghiệp vụ ImageService + CsvExporter + Product có cột image_path.
+ * BizTest: kiểm tra nghiệp vụ ImageService + ExcelExporter + Product có cột image_path.
  * Chạy độc lập, không mở UI.
  */
 public class BizTest2 {
@@ -66,16 +66,18 @@ public class BizTest2 {
         System.out.println("[3d] deleted     = " + (Files.exists(resolved) ? "STILL EXISTS" : "OK"));
         tmp.delete();
 
-        // 4) CsvExporter ghi tạm ra file
+        // 4) ExcelExporter ghi tạm ra file .xlsx
         javax.swing.table.DefaultTableModel m = new javax.swing.table.DefaultTableModel(
                 new Object[]{"Tên", "Giá"}, 0);
         m.addRow(new Object[]{"Sản phẩm A, có dấu phẩy", "1000"});
         m.addRow(new Object[]{"Hàng B", "2.500"});
-        File csv = new File(AppPaths.getExportDir().toFile(), "test.csv");
-        CsvExporter.writeTable(m, csv);
-        System.out.println("[4] CSV file size = " + csv.length() + " bytes");
-        System.out.println("[4] CSV head:");
-        Files.lines(csv.toPath()).limit(3).forEach(line -> System.out.println("    " + line));
+        File xlsx = new File(AppPaths.getExportDir().toFile(), "test.xlsx");
+        ExcelExporter.writeTable(m, xlsx);
+        System.out.println("[4] XLSX file size = " + xlsx.length() + " bytes");
+        System.out.println("[4] XLSX parts:");
+        try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(xlsx)) {
+            zip.stream().forEach(e -> System.out.println("    " + e.getName()));
+        }
 
         // 5) ProductService search (cần sp có sẵn)
         ProductService ps = new ProductService();

@@ -1,14 +1,16 @@
 package com.utc.warehouse.ui.product;
 
+import com.utc.warehouse.dao.ReportDAO;
 import com.utc.warehouse.entity.Product;
 import com.utc.warehouse.service.ImageService;
 import com.utc.warehouse.service.ProductService;
+import com.utc.warehouse.service.ReportService;
 import com.utc.warehouse.ui.common.BasePanel;
 import com.utc.warehouse.ui.common.TableDoubleClick;
 import com.utc.warehouse.ui.common.TableExportHelper;
 import com.utc.warehouse.ui.common.TableUtils;
 import com.utc.warehouse.ui.common.UIConstants;
-import com.utc.warehouse.util.CsvExporter;
+import com.utc.warehouse.util.ExcelExporter;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -23,9 +25,10 @@ public class ProductListPanel extends BasePanel {
 
     private final ProductService service = new ProductService();
     private final ImageService imageService = new ImageService();
+    private final ReportService reportService = new ReportService();
 
     // Cột:  0=Ảnh, 1=ID, 2=SKU, 3=Tên, 4=Danh mục, 5=ĐVT, 6=Giá bán,
-    //       7=Giá vốn, 8=LN/ĐV, 9=Margin%, 10=VAT%, 11=Tồn tối thiểu, 12=Kinh doanh
+    //       7=Giá vốn, 8=LN/ĐV, 9=Margin%, 10=VAT%, 11=Tồn kho, 12=Kinh doanh
     private static final int COL_IMAGE  = 0;
     private static final int COL_ID     = 1;
     private static final int COL_SKU    = 2;
@@ -37,12 +40,12 @@ public class ProductListPanel extends BasePanel {
     private static final int COL_PROFIT = 8;
     private static final int COL_MARGIN = 9;
     private static final int COL_VAT    = 10;
-    private static final int COL_MIN    = 11;
+    private static final int COL_STOCK  = 11;
     private static final int COL_ACTIVE = 12;
 
     private final Object[] COLS = {
             "Ảnh", "ID", "SKU", "Tên sản phẩm", "Danh mục", "ĐVT",
-            "Giá bán", "Giá vốn", "LN/ĐV", "Margin%", "VAT%", "Tồn tối thiểu", "Kinh doanh"
+            "Giá bán", "Giá vốn", "LN/ĐV", "Margin%", "VAT%", "Tồn kho", "Kinh doanh"
     };
 
     private JTable table;
@@ -51,6 +54,8 @@ public class ProductListPanel extends BasePanel {
     private final Map<Integer, String> imagePathCache = new HashMap<>();
     /** Cache id -> Product để tránh service.search() mỗi lần. */
     private final Map<Integer, Product> productCache = new HashMap<>();
+    /** Cache id -> tồn kho hiện tại (SUM nhập - SUM xuất). */
+    private final Map<Integer, Long> stockCache = new HashMap<>();
 
     public ProductListPanel() { super("Quản lý Sản phẩm"); }
 
@@ -67,7 +72,7 @@ public class ProductListPanel extends BasePanel {
         JButton btnAdd      = primaryButton("+ Thêm");
         JButton btnEdit     = secondaryButton("Sửa");
         JButton btnDelete   = dangerButton("Xóa");
-        JButton btnExport   = secondaryButton("Xuất CSV");
+        JButton btnExport   = secondaryButton("Xuất Excel");
 
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         left.setOpaque(false);
@@ -85,7 +90,7 @@ public class ProductListPanel extends BasePanel {
         btnSearch.addActionListener(e -> reloadFiltered(search.getText()));
         search.addActionListener(e -> reloadFiltered(search.getText()));
         btnRefresh.addActionListener(e -> { search.setText(""); reload(); });
-        btnExport.addActionListener(e -> exportCsv());
+        btnExport.addActionListener(e -> exportExcel());
         btnAdd.addActionListener(e    -> onAdd());
         btnEdit.addActionListener(e   -> onEdit());
         btnDelete.addActionListener(e -> onDelete());
@@ -108,7 +113,7 @@ public class ProductListPanel extends BasePanel {
         sc.bind("DELETE",  "delete",  this::onDelete,  "Xoá sản phẩm");
         sc.bind("F5",      "refresh", this::reload,    "Làm mới danh sách");
         sc.bind("ctrl F",  "search",  this::onShortcutFocusSearch, "Tìm kiếm");
-        sc.bind("ctrl X",  "export",  this::exportCsv, "Xuất CSV");
+        sc.bind("ctrl X",  "export",  this::exportExcel, "Xuất Excel");
     }
 
     @Override protected void onShortcutAdd()     { onAdd(); }
@@ -127,7 +132,7 @@ public class ProductListPanel extends BasePanel {
         TableUtils.centerColumn(table, COL_ID);
         TableUtils.centerColumn(table, COL_UNIT);
         TableUtils.centerColumn(table, COL_VAT);
-        TableUtils.centerColumn(table, COL_MIN);
+        TableUtils.rightColumn(table, COL_STOCK);
         TableUtils.centerColumn(table, COL_ACTIVE);
         TableUtils.rightColumn(table, COL_SALE);
         TableUtils.rightColumn(table, COL_COST);
@@ -225,12 +230,14 @@ public class ProductListPanel extends BasePanel {
             // Refresh cache để renderer không query DB
             productCache.clear();
             imagePathCache.clear();
+            loadStockCache();
 
             for (Product p : list) {
                 Integer id = p.getId();
                 productCache.put(id, p);
                 imagePathCache.put(id, p.getImagePath());
 
+                Long onHand = id == null ? null : stockCache.get(id);
                 m.addRow(new Object[]{
                         null,                                // Ảnh — renderer vẽ
                         id,                                  // 1 ID
@@ -243,13 +250,34 @@ public class ProductListPanel extends BasePanel {
                         p.getProfitPerUnit(),                // 8 LN/ĐV
                         p.getProfitMarginPercent().toPlainString() + "%",  // 9 Margin
                         p.getVatRate().toPlainString() + "%",// 10 VAT
-                        p.getMinStock(),                     // 11 Tồn
+                        onHand == null ? 0L : onHand,         // 11 Tồn kho
                         Boolean.TRUE.equals(p.getActive()) ? "✓" : "✗"     // 12 Active
                 });
             }
         } catch (Exception ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Lỗi tải dữ liệu: " + ex.getMessage(),
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Nạp tồn kho của TOÀN BỘ sản phẩm bằng 1 query duy nhất.
+     *
+     * <p>Không gọi getOnHand() trong vòng lặp: mỗi sản phẩm là 1 query riêng
+     * (N+1) và bảng sản phẩm có thể vài trăm dòng → rất chậm.
+     */
+    private void loadStockCache() {
+        stockCache.clear();
+        try {
+            for (ReportDAO.InventoryRow r : reportService.getInventory()) {
+                if (r.getProductId() != null) {
+                    stockCache.put(r.getProductId(), r.getOnHand() == null ? 0L : r.getOnHand());
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Lỗi tải tồn kho: " + ex.getMessage(),
                     "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -313,8 +341,8 @@ public class ProductListPanel extends BasePanel {
         }
     }
 
-    /** Xuất danh sách hiện tại ra CSV (bỏ cột Ảnh vì chỉ là renderer). */
-    public void exportCsv() {
+    /** Xuất danh sách hiện tại ra Excel (bỏ cột Ảnh vì chỉ là renderer). */
+    public void exportExcel() {
         try {
             if (TableUtils.modelOf(table).getRowCount() == 0) reload();
             DefaultTableModel src = TableUtils.modelOf(table);
@@ -335,7 +363,7 @@ public class ProductListPanel extends BasePanel {
                 copy.addRow(row);
             }
 
-            java.io.File out = CsvExporter.exportTable(new JTable(copy), "san_pham");
+            java.io.File out = ExcelExporter.exportTable(new JTable(copy), "san_pham");
             if (out != null) {
                 JOptionPane.showMessageDialog(this,
                         "Đã xuất " + copy.getRowCount() + " dòng ra:\n" + out.getAbsolutePath());

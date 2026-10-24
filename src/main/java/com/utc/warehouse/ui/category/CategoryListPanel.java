@@ -34,7 +34,7 @@ public class CategoryListPanel extends BasePanel {
         JButton btnEdit   = secondaryButton("Sửa");
         JButton btnDelete = dangerButton("Xóa");
         JButton btnRefresh = secondaryButton("Làm mới");
-        JButton btnExport = secondaryButton("Xuất CSV");
+        JButton btnExport = secondaryButton("Xuất Excel");
 
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
@@ -80,7 +80,7 @@ public class CategoryListPanel extends BasePanel {
         sc.bind("DELETE",  "delete",  this::onDelete,  "Xoá danh mục");
         sc.bind("F5",      "refresh", this::reload,    "Làm mới");
         sc.bind("ctrl F",  "search",  this::onShortcutFocusSearch, "Tìm kiếm");
-        sc.bind("ctrl X",  "export",  () -> com.utc.warehouse.ui.common.TableExportHelper.exportCurrentTable(table, "danh_muc"), "Xuất CSV");
+        sc.bind("ctrl X",  "export",  () -> com.utc.warehouse.ui.common.TableExportHelper.exportCurrentTable(table, "danh_muc"), "Xuất Excel");
     }
 
     @Override protected void onShortcutAdd()    { onAdd(); }

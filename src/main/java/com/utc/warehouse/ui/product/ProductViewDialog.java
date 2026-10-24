@@ -2,6 +2,7 @@ package com.utc.warehouse.ui.product;
 
 import com.utc.warehouse.entity.Product;
 import com.utc.warehouse.service.ImageService;
+import com.utc.warehouse.service.ReportService;
 import com.utc.warehouse.ui.common.Theme;
 import com.utc.warehouse.util.MoneyFormat;
 
@@ -22,6 +23,7 @@ public class ProductViewDialog extends JDialog {
 
     private final Product product;
     private final ImageService imageService = new ImageService();
+    private final ReportService reportService = new ReportService();
     private final JLabel lblImage = new JLabel();
     private final JLabel lblImgHint = new JLabel("(Click ảnh để phóng to)", SwingConstants.CENTER);
 
@@ -110,8 +112,8 @@ public class ProductViewDialog extends JDialog {
 
         row = addSeparator(info, g, row, "💰 Giá & Lợi nhuận");
 
-        addInfo(info, g, row++, "Giá bán", MoneyFormat.format(safeBd(product.getSalePrice())) + " đ");
-        addInfo(info, g, row++, "Giá vốn", MoneyFormat.format(safeBd(product.getCostPrice())) + " đ");
+        addInfo(info, g, row++, "Giá bán", MoneyFormat.format(safeBd(product.getSalePrice())));
+        addInfo(info, g, row++, "Giá vốn", MoneyFormat.format(safeBd(product.getCostPrice())));
 
         BigDecimal profit = safeBd(product.getSalePrice()).subtract(safeBd(product.getCostPrice()));
         BigDecimal margin = safeBd(product.getSalePrice()).signum() == 0 ? BigDecimal.ZERO
@@ -126,13 +128,26 @@ public class ProductViewDialog extends JDialog {
 
         row = addSeparator(info, g, row, "📊 Kho");
 
-        addInfo(info, g, row++, "Tồn kho hiện tại", String.valueOf(product.getTotalImportedQty()));
-        addInfo(info, g, row++, "Tồn tối thiểu", String.valueOf(product.getMinStock()));
-        if (product.getTotalImportedQty() < product.getMinStock()) {
-            JLabel warn = new JLabel("⚠ Dưới mức tối thiểu");
+        // Tồn phải lấy từ ReportDAO.getOnHand() = SUM(nhập) - SUM(xuất).
+        // KHÔNG dùng product.getTotalImportedQty(): field đó chỉ cộng dồn lúc NHẬP,
+        // không bao giờ trừ lúc XUẤT nên sẽ hiện sai (và cảnh báo dưới mức tối
+        // thiểu cũng không bao giờ bắn) sau khi đã bán bớt hàng.
+        int onHand = reportService.getOnHand(product.getId());
+        int minStock = product.getMinStock() == null ? 0 : product.getMinStock();
+
+        addInfo(info, g, row++, "Tồn kho hiện tại", onHand + " " + nullSafe(product.getUnit()));
+        addInfo(info, g, row++, "Tồn tối thiểu", minStock + " " + nullSafe(product.getUnit()));
+
+        if (onHand < minStock) {
+            JLabel warn = new JLabel("⚠ Dưới mức tối thiểu (thiếu " + (minStock - onHand) + ")");
             warn.setFont(Theme.FONT_HEADER);
             warn.setForeground(Theme.DANGER);
             addInfo(info, g, row++, "Cảnh báo", warn);
+        } else if (onHand == 0) {
+            JLabel empty = new JLabel("⚠ Hết hàng");
+            empty.setFont(Theme.FONT_HEADER);
+            empty.setForeground(Theme.DANGER);
+            addInfo(info, g, row++, "Cảnh báo", empty);
         }
 
         // ----- Split -----

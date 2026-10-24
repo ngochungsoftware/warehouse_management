@@ -17,8 +17,10 @@ import com.utc.warehouse.ui.purchase.PurchaseOrderPanel;
 import com.utc.warehouse.ui.admin.AuditLogPanel;
 import com.utc.warehouse.ui.stock.ImportPanel;
 import com.utc.warehouse.ui.stock.ExportPanel;
+import com.utc.warehouse.ui.stock.StockInventoryPanel;
 import com.utc.warehouse.ui.stock.TransactionHistoryPanel;
 import com.utc.warehouse.ui.supplier.SupplierListPanel;
+import com.utc.warehouse.ui.user.EmployeeManagementPanel;
 import com.utc.warehouse.ui.user.UserManagementPanel;
 
 import javax.swing.*;
@@ -326,12 +328,14 @@ public class MainFrame extends JFrame {
         addMenu("Phiếu nhập",          IconKind.IMPORT,    new ImportPanel());
         addMenu("Phiếu xuất",          IconKind.EXPORT,    new ExportPanel());
         addMenu("Lịch sử nhập / xuất", IconKind.HISTORY,   new TransactionHistoryPanel());
+        addMenu("Báo cáo tồn kho",     IconKind.STOCK,     new StockInventoryPanel());
         addMenu("Hóa đơn bán hàng",    IconKind.INVOICE,   new InvoicePanel());
         addMenu("Báo cáo doanh thu",   IconKind.REPORT,    new RevenueReportPanel());
         addMenu("Top sản phẩm bán chạy", IconKind.STAR,    new TopProductsPanel());
         addMenu("Công nợ khách hàng",   IconKind.DEBT,     new DebtReportPanel());
         addMenu("Đơn đặt hàng (PO)",    IconKind.ORDER,    new PurchaseOrderPanel());
         if (admin) {
+            addMenu("Quản lý nhân viên",   IconKind.USER,    new EmployeeManagementPanel());
             addMenu("Quản lý người dùng", IconKind.USER,    new UserManagementPanel());
             addMenu("Lịch sử thao tác",   IconKind.HISTORY,  new AuditLogPanel());
         }
@@ -426,7 +430,7 @@ public class MainFrame extends JFrame {
 
     private enum IconKind {
         DASHBOARD, PRODUCT, CATEGORY, SUPPLIER, CUSTOMER, IMPORT, EXPORT, HISTORY, USER,
-        INVOICE, REPORT, STAR, DEBT, ORDER
+        INVOICE, REPORT, STAR, DEBT, ORDER, STOCK
     }
 
     /** Custom renderer vẽ icon SVG-like + highlight khi selected. */
@@ -578,6 +582,12 @@ public class MainFrame extends JFrame {
                     g2.drawLine(x0 + 2, y0 + 5, x0 + s - 4, y0 + 5);
                     g2.drawLine(x0 + 2, y0 + 9, x0 + s - 4, y0 + 9);
                     g2.drawLine(x0 + 2, y0 + 13, x0 + s / 2, y0 + 13);
+                }
+                case STOCK -> {
+                    // Thùng hàng: hộp + đường kẻ giữa (nét nhạt để không rối với IMPORT)
+                    g2.drawRect(x0 + 1, y0 + 3, s - 2, s - 5);
+                    g2.drawLine(x0 + 1, y0 + 7, x0 + s - 1, y0 + 7);
+                    g2.drawLine(x0 + s / 2, y0 + 7, x0 + s / 2, y0 + s - 2);
                 }
             }
             g2.dispose();

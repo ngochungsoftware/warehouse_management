@@ -18,6 +18,15 @@ App desktop quản lý kho viết bằng **Java Swing + MySQL**, truy cập dữ
 - MySQL 8.x đang chạy
 - Maven 3.6+
 
+## Tài liệu
+
+| Tài liệu | Dành cho |
+|----------|----------|
+| [`docs/HUONG-DAN-SU-DUNG.md`](docs/HUONG-DAN-SU-DUNG.md) | **Người dùng cuối** — hướng dẫn thao tác từng màn hình, phím tắt, câu hỏi thường gặp |
+| [`docs/HUONG-DAN-CAI-DAT.md`](docs/HUONG-DAN-CAI-DAT.md) | **Người cài đặt** — cài đặt, tạo DB, build & chạy, khắc phục sự cố |
+| [`docs/LUONG-HOAT-DONG.md`](docs/LUONG-HOAT-DONG.md) | **Sơ đồ luồng** — 12 sơ đồ nghiệp vụ: đăng nhập, nhập/xuất kho, PO, hoá đơn, thu tiền, báo cáo |
+| [`docs/README.md`](docs/README.md) | Mục lục tài liệu |
+
 ## Cài đặt & chạy
 
 ### Bước 1: Tạo database
@@ -59,14 +68,22 @@ java -jar target/warehouse_management.jar
 
 Hoặc dùng shade plugin (đã cấu hình sẵn) để ra fat-jar chạy độc lập.
 
-### Đăng nhập
+### Tài khoản mặc định
 
-Sau khi chạy `sql/schema.sql`, đăng nhập với 1 trong 2 tài khoản đã seed sẵn:
+Lần chạy đầu tiên, nếu bảng `users` còn trống, app tự tạo sẵn 2 tài khoản:
 
 | User  | Password   | Role  |
 |-------|------------|-------|
 | admin | admin123   | ADMIN |
 | staff | staff123   | STAFF |
+
+> **Đổi mật khẩu ngay sau lần đăng nhập đầu tiên.** Hai mật khẩu này nằm trong
+> mã nguồn (`AuthService.bootstrapDefaultUsers`) và là thông tin công khai của
+> bài tập. Màn đăng nhập **không** hiển thị chúng nữa — hãy đổi qua màn
+> **Quản lý người dùng** (`Ctrl+R` → Reset mật khẩu).
+
+Sau khi đổi mật khẩu `admin`, hệ thống sẽ không tạo lại tài khoản cũ nữa
+(`bootstrapDefaultUsers` chỉ chạy khi bảng `users` rỗng hoàn toàn).
 
 ## Cấu trúc dự án
 
@@ -90,12 +107,12 @@ warehouse_management/
 
 ## Đường dẫn lưu trữ file (AppPaths)
 
-Ảnh sản phẩm, file CSV export và backup database được lưu **ngoài DB**, trong các thư mục con
+Ảnh sản phẩm, file Excel export và backup database được lưu **ngoài DB**, trong các thư mục con
 của thư mục gốc ứng dụng (dò tự động từ `pom.xml` / `.git`, hoặc thư mục cha file `.jar`):
 
 ```
 warehouse_management/
-├── exports/          # file CSV xuất từ báo cáo
+├── exports/          # file .xlsx xuất từ báo cáo
 ├── product_images/   # ảnh sản phẩm (DB chỉ lưu tên file)
 └── backups/          # backup database
 ```
@@ -118,6 +135,11 @@ java -Dwarehouse.exports="D:/warehouse/exports" -jar warehouse.jar
 Nếu không dò được thư mục gốc (chạy từ classpath lạ), app lùi về `~/.warehouse_management/`.
 Mọi thư mục con đều được tạo tự động nếu chưa tồn tại.
 
+## Xuất Excel (.xlsx)
+
+Các màn danh sách (sản phẩm, khách hàng, nhà cung cấp, danh mục, hóa đơn, đơn đặt hàng) và báo
+cáo doanh thu đều có nút **"Xuất Excel"** (phím tắt `Ctrl+X`).
+
 ## Schema MySQL (tổng quan)
 
 - `users` — người dùng (id, username, password_hash, role, active)
@@ -139,6 +161,7 @@ Mọi thư mục con đều được tạo tự động nếu chưa tồn tại.
 | Hibernate ORM    | 6.4.4.Final     |
 | Jakarta JPA API  | 3.1.0           |
 | jBCrypt          | 0.4             |
+| Apache POI       | 5.2.5           |
 | SLF4J + Logback  | 2.0.12 / 1.5.6  |
 | Maven Shade      | 3.5.3           |
 
@@ -148,6 +171,69 @@ Mọi thư mục con đều được tạo tự động nếu chưa tồn tại.
 - **Xuất kho**: phải có tồn >= số lượng xuất. Service sẽ kiểm tra trước khi lưu, rollback nếu thiếu.
 - **Mỗi thao tác ghi** chạy trong 1 JPA transaction. Rollback tự động nếu exception.
 - **Phân quyền**: menu "Quản lý người dùng" chỉ hiện với role ADMIN.
+
+### Quản lý người dùng (ADMIN)
+
+Đầy đủ CRUD + các thao tác riêng cho tài khoản:
+
+| Phím tắt | Chức năng |
+|----------|-----------|
+| `Ctrl+N` | Thêm người dùng |
+| `Ctrl+E` | Sửa họ tên / role (không sửa username) |
+| `Delete` | Xoá hoặc khoá (xem bên dưới) |
+| `Ctrl+R` | Reset mật khẩu |
+| `Ctrl+T` | Khoá / Mở tài khoản |
+| `Ctrl+F` | Tìm theo username / họ tên |
+| `Ctrl+X` | Xuất Excel |
+
+**Về thao tác xoá** — bảng `stock_transactions` có
+`FOREIGN KEY (user_id) REFERENCES users(id)` **không kèm `ON DELETE`**, nên MySQL
+sẽ từ chối xoá hẳn một user đã từng phát sinh giao dịch / hoá đơn / thanh toán.
+
+Vì vậy panel xử lý hai trường hợp:
+
+- **Chưa có dữ liệu liên quan** → xoá hẳn, không thể hoàn tác.
+- **Đã có dữ liệu liên quan** → báo số bản ghi bị liên quan và đề nghị **khoá tài
+  khoản** (soft delete) thay vì xoá. Đây là cách đúng vì giữ nguyên lịch sử.
+
+**Chốt an toàn** (không thể vô hiệu hoá từ UI):
+
+- Không xoá được tài khoản **đang đăng nhập**.
+- Phải còn ít nhất **1 tài khoản ADMIN đang hoạt động** — tránh tự khoá quyền
+  quản trị khỏi hệ thống.
+
+Username không sửa được sau khi tạo vì dữ liệu lịch sử đã ghi theo tên cũ.
+
+### Quản lý nhân viên (ADMIN)
+
+Màn chuyên biệt để **cấp tài khoản cho nhân viên** — chỉ hiện menu cho ADMIN.
+
+Khác màn "Quản lý người dùng" ở 2 điểm:
+
+- Chỉ hiển thị user role `STAFF`, **không cấp được quyền ADMIN** — cấp quyền quản
+  trị thì sang màn "Quản lý người dùng".
+- Có nút **Sinh mật khẩu ngẫu nhiên** (8 ký tự, loại ký tự dễ nhầm `0/O`, `1/l/I`).
+  Sau khi cấp, app hiển thị thông tin đăng nhập một lần để admin chuyển cho nhân
+  viên.
+
+| Phím tắt | Chức năng |
+|----------|-----------|
+| `Ctrl+N` | Cấp tài khoản nhân viên |
+| `Ctrl+E` | Sửa họ tên |
+| `Delete` | Xoá hoặc khoá (xem bên dưới) |
+| `Ctrl+R` | Đổi mật khẩu |
+| `Ctrl+T` | Khoá / Mở tài khoản |
+| `Ctrl+F` | Tìm mã NV / họ tên |
+| `Ctrl+X` | Xuất Excel |
+
+Ngoài ra có bộ lọc **Tất cả / Đang hoạt động / Đã khoá**, và double-click để
+xem chi tiết nhân viên.
+
+Nhân viên không thấy menu này (và cũng không thấy menu "Quản lý người dùng",
+"Lịch sử thao tác") — quyền quản trị chỉ dành cho ADMIN.
+
+Quy tắc xoá giống màn người dùng: chưa có giao dịch thì xoá hẳn, đã có giao dịch
+thì đề nghị khoá tài khoản để giữ lịch sử.
 
 ## Khắc phục sự cố
 
@@ -159,9 +245,10 @@ Mọi thư mục con đều được tạo tự động nếu chưa tồn tại.
 
 **Màn hình trắng khi mở MainFrame**: Mở log, kiểm tra stack trace. Thường do query JPQL sai trong `ReportDAO`.
 
+
 ## Phát triển
 
-- Có thể mở rộng thêm: in hóa đơn, xuất CSV/Excel, thống kê doanh thu theo khoảng thời gian, quản lý nhiều kho.
+- Có thể mở rộng thêm: in hóa đơn, xuất PDF, thống kê doanh thu theo khoảng thời gian, quản lý nhiều kho.
 - Để chuyển sang H2 Database (test trong bộ nhớ), chỉ cần đổi driver và dialect trong `persistence.xml`.
 
 ## Tác giả

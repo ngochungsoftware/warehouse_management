@@ -101,8 +101,9 @@ public class BizTest3 {
         ps.delete(p2.getId());
         Product afterDel2 = ps.search("").stream().filter(x -> x.getId().equals(p2.getId())).findFirst().orElse(null);
         System.out.println("[7] Delete with-image OK, p2 in list: " + (afterDel2 != null));
-        img.delete(newFilename);
-        System.out.println("[7] After delete, image file exists: " + java.nio.file.Files.exists(img.resolve(newFilename)));
+        // File vua xoa nen resolve() tra null -> Files.exists(null) se NPE.
+        java.nio.file.Path remaining = img.resolve(newFilename);
+        System.out.println("[7] After delete, image file gone: " + (remaining == null));
 
         tmp.delete();
 

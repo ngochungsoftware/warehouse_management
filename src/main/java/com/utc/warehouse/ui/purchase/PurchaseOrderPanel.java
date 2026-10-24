@@ -55,7 +55,7 @@ public class PurchaseOrderPanel extends BasePanel {
         JButton btnReceive = primaryButton("Nhận hàng");
         JButton btnCancel = dangerButton("Hủy đơn");
         JButton btnRefresh = secondaryButton("Làm mới");
-        JButton btnExport = secondaryButton("Xuất CSV");
+        JButton btnExport = secondaryButton("Xuất Excel");
         btnNew.setName("btnNew");
         btnView.setName("btnView");
         btnApprove.setName("btnApprove");
@@ -88,7 +88,7 @@ public class PurchaseOrderPanel extends BasePanel {
         sc.bind("ctrl N", "new",     this::onNew,     "Tạo PO");
         sc.bind("ctrl R", "receive", this::onReceive, "Nhận hàng");
         sc.bind("F5",     "refresh", this::reload,    "Làm mới");
-        sc.bind("ctrl X", "export",  () -> com.utc.warehouse.ui.common.TableExportHelper.exportCurrentTable(table, "don_dat_hang"), "Xuất CSV");
+        sc.bind("ctrl X", "export",  () -> com.utc.warehouse.ui.common.TableExportHelper.exportCurrentTable(table, "don_dat_hang"), "Xuất Excel");
     }
 
     @Override
@@ -257,43 +257,8 @@ public class PurchaseOrderPanel extends BasePanel {
                 if (fresh != null) po = fresh;
             } catch (Exception ignored) { }
         }
-        StringBuilder sb = new StringBuilder();
-        sb.append("Mã PO: ").append(po.getCode() == null ? "—" : po.getCode()).append('\n');
-        sb.append("NCC: ").append(po.getSupplier() == null ? "(không)" : po.getSupplier().getName()).append('\n');
-        sb.append("Trạng thái: ").append(statusVi(po.getStatus())).append('\n');
-        sb.append("Ngày tạo: ").append(po.getCreatedAt() == null ? "—" : po.getCreatedAt().toLocalDate()).append('\n');
-        if (po.getExpectedDate() != null) sb.append("Dự kiến giao: ").append(po.getExpectedDate()).append('\n');
-        if (po.getReceivedTransactionId() != null)
-            sb.append("Phiếu nhập: #").append(po.getReceivedTransactionId()).append('\n');
-        if (po.getNote() != null && !po.getNote().isBlank()) sb.append("Ghi chú: ").append(po.getNote()).append('\n');
-        sb.append('\n');
-        sb.append(String.format("%-6s %-12s %-25s %6s %6s %12s%n",
-                "ID", "SKU", "Tên SP", "Đặt", "Đã nhận", "Thành tiền"));
-        if (po.getItems() != null) {
-            for (PurchaseOrderItem it : po.getItems()) {
-                String name = it.getProduct() == null ? "(đã xoá)" : it.getProduct().getName();
-                String sku  = it.getProduct() == null ? "—" : it.getProduct().getSku();
-                Integer pid = it.getProduct() == null ? null : it.getProduct().getId();
-                sb.append(String.format("%-6s %-12s %-25s %6d %6d %12s%n",
-                        pid == null ? "—" : pid.toString(),
-                        truncate(sku, 12),
-                        truncate(name, 25),
-                        it.getOrderedQty() == null ? 0 : it.getOrderedQty(),
-                        it.getReceivedQty() == null ? 0 : it.getReceivedQty(),
-                        MoneyFormat.format(it.getLineTotal())));
-            }
-        }
-        sb.append('\n').append("TỔNG: ").append(MoneyFormat.format(po.getTotal())).append(" đ");
-        JTextArea ta = new JTextArea(sb.toString());
-        ta.setEditable(false);
-        ta.setFont(Theme.FONT_NORMAL);
-        JOptionPane.showMessageDialog(this, new JScrollPane(ta),
-                "Chi tiết " + (po.getCode() == null ? "" : po.getCode()), JOptionPane.PLAIN_MESSAGE);
-    }
-
-    private static String truncate(String s, int max) {
-        if (s == null) return "";
-        return s.length() <= max ? s : s.substring(0, max - 1) + "…";
+        com.utc.warehouse.ui.common.DetailDialogs.showPurchaseOrderDetail(
+                SwingUtilities.getWindowAncestor(this), po);
     }
 
     /* ============== helpers ============== */
@@ -492,7 +457,7 @@ public class PurchaseOrderPanel extends BasePanel {
                         MoneyFormat.format(price), MoneyFormat.format(item.getLineTotal())
                 });
                 BigDecimal sum = drafts.stream().map(PurchaseOrderItem::getLineTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
-                lblTotal.setText(MoneyFormat.format(sum) + " đ");
+                lblTotal.setText(MoneyFormat.format(sum));
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Số không hợp lệ.");
             }
@@ -505,7 +470,7 @@ public class PurchaseOrderPanel extends BasePanel {
             drafts.remove(mr);
             lineModel.removeRow(mr);
             BigDecimal sum = drafts.stream().map(PurchaseOrderItem::getLineTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
-            lblTotal.setText(MoneyFormat.format(sum) + " đ");
+            lblTotal.setText(MoneyFormat.format(sum));
         }
 
         private void onSave() {
