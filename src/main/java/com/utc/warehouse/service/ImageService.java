@@ -7,26 +7,15 @@ import org.slf4j.LoggerFactory;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Quản lý file ảnh sản phẩm.
- *  - Lưu trong thư mục <user.home>/.warehouse_management/product_images/
- *  - Tự resize về tối đa MAX_DIMENSION để tiết kiệm dung lượng
- *  - Hỗ trợ JPEG, PNG, GIF, WEBP, BMP
- *  - Giới hạn kích thước file tối đa 5 MB
- *
- * <p>Đường dẫn lưu trong DB là dạng tương đối (vd "abc-123.jpg") — khi cần dùng, resolve qua {@link #resolve(String)}.
- */
+
 public class ImageService {
 
     private static final Logger log = LoggerFactory.getLogger(ImageService.class);

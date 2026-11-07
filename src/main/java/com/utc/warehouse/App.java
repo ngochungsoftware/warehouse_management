@@ -14,10 +14,8 @@ public class App {
     private static final Logger log = LoggerFactory.getLogger(App.class);
 
     public static void main(String[] args) {
-        // Cài Look & Feel hiện đại (FlatLaf) + theme/palette
         Theme.install();
 
-        // Khởi tạo EntityManagerFactory
         try {
             HibernateUtil.getEntityManagerFactory();
         } catch (Exception ex) {
@@ -29,7 +27,6 @@ public class App {
             System.exit(1);
         }
 
-        // Bootstrap user mặc định nếu DB trống
         try {
             AuthService.get().bootstrapDefaultUsers();
         } catch (Exception ex) {

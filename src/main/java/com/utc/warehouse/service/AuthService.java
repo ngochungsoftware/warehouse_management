@@ -10,10 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
-/**
- * Quản lý đăng nhập, hash mật khẩu bằng BCrypt, lưu user hiện tại vào memory.
- * Có cơ chế bootstrap 2 user mặc định nếu DB rỗng.
- */
 public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);

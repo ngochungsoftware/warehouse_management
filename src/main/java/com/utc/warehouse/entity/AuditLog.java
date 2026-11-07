@@ -49,7 +49,6 @@ public class AuditLog {
     @Column(length = 500)
     private String details;
 
-    /** IP client (nếu có). */
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
@@ -58,7 +57,6 @@ public class AuditLog {
 
     public AuditLog() { }
 
-    /** Builder tiện dụng. */
     public static AuditLog of(User user, AuditAction action, String entityType,
                               Integer entityId, String entityCode, String details) {
         AuditLog a = new AuditLog();

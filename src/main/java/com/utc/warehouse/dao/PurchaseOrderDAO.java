@@ -12,12 +12,6 @@ public class PurchaseOrderDAO extends GenericDAO<PurchaseOrder, Integer> {
     @Override
     protected Class<PurchaseOrder> entityClass() { return PurchaseOrder.class; }
 
-    /**
-     * Lấy tất cả PO, JOIN FETCH items + product để tránh
-     * LazyInitializationException khi UI đọc ngoài transaction.
-     *
-     * <p>supplier và user đã EAGER, không cần fetch thêm.
-     */
     public List<PurchaseOrder> findAllOrdered() {
         EntityManager em = HibernateUtil.getEntityManager();
         try {
@@ -50,7 +44,6 @@ public class PurchaseOrderDAO extends GenericDAO<PurchaseOrder, Integer> {
         }
     }
 
-    /** Lấy 1 PO kèm items + product cho dialog chi tiết. */
     public PurchaseOrder findByIdWithItems(Integer id) {
         EntityManager em = HibernateUtil.getEntityManager();
         try {

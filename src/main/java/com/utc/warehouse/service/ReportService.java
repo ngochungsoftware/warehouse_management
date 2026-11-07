@@ -17,7 +17,6 @@ public class ReportService {
         return reportDAO.getOnHand(productId);
     }
 
-    /** Lượng nhập/xuất theo ngày trong khoảng [from, to] — dùng cho stacked bar. */
     public List<ReportDAO.StockFlowRow> stockFlowByDate(LocalDate from, LocalDate to) {
         return reportDAO.stockFlowByDate(from, to);
     }

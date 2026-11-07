@@ -27,18 +27,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Tạo và quản lý hóa đơn bán hàng, phiếu thu/chi.
- *
- * Quy trình:
- *  1) Tạo phiếu xuất kho (stock_transactions) - ghi tồn
- *  2) Tạo hóa đơn (invoices) - ghi tài chính
- *     - subtotal = sum(qty * unitPrice) chưa VAT
- *     - vatAmount = sum(qty * unitPrice * vatRate / 100)
- *     - discount = sum(discount)
- *     - total = subtotal + vatAmount - discount
- *  3) Tạo phiếu thu (payments) - cập nhật paid/debt trên invoice
- */
 public class InvoiceService {
 
     private static final Logger log = LoggerFactory.getLogger(InvoiceService.class);
@@ -49,15 +37,10 @@ public class InvoiceService {
     private final StockTransactionDAO stockDAO = new StockTransactionDAO();
     private final StockService stockService = new StockService();
 
-    /**
-     * Tạo đồng thời phiếu xuất kho + hóa đơn.
-     * Phiếu xuất giúp tồn kho giảm; hóa đơn ghi tài chính.
-     */
     public Invoice createFromExport(User user, Integer customerId, String note,
                                     List<InvoiceItemDraft> drafts) {
         if (drafts == null || drafts.isEmpty())
             throw new IllegalArgumentException("Hóa đơn phải có ít nhất 1 sản phẩm");
-        // Validation
         for (InvoiceItemDraft d : drafts) {
             if (d.productId == null) throw new IllegalArgumentException("Sản phẩm trống");
             if (d.quantity == null || d.quantity <= 0) throw new IllegalArgumentException("Số lượng phải > 0");
@@ -143,9 +126,7 @@ public class InvoiceService {
         }
     }
 
-    /**
-     * Tạo phiếu thu, cập nhật paid/debt của hóa đơn.
-     */
+
     public Payment createReceipt(User user, Integer invoiceId, BigDecimal amount,
                                  PaymentMethod method, String note) {
         if (amount == null || amount.signum() <= 0)
@@ -153,7 +134,6 @@ public class InvoiceService {
         return recordPayment(user, PaymentType.RECEIPT, invoiceId, amount, method, note);
     }
 
-    /** Phiếu chi (trả NCC, chi phí) - không gắn vào invoice. */
     public Payment createPayment(User user, String partnerType, Integer partnerId,
                                  BigDecimal amount, PaymentMethod method, String note) {
         if (amount == null || amount.signum() <= 0)
@@ -231,17 +211,14 @@ public class InvoiceService {
 
     public List<Invoice> allInvoices() { return invoiceDAO.findAll(); }
 
-    /** Hóa đơn kèm items + customer — dùng cho bảng danh sách và màn xem chi tiết. */
     public List<Invoice> allInvoicesWithDetails() { return invoiceDAO.findAllWithDetails(); }
 
-    /** Tìm hóa đơn theo mã, kèm items + customer đã nạp sẵn (tránh LazyInitializationException). */
     public Invoice findByCodeWithDetails(String code) { return invoiceDAO.findByCodeWithDetails(code).orElse(null); }
 
     public Optional<Invoice> findInvoice(Integer id) { return invoiceDAO.findById(id); }
 
     public List<Payment> allPayments() { return paymentDAO.findAll(); }
 
-    /* ============== Helpers ============== */
     private String generateCode(EntityManager em, String prefix) {
         String year = java.time.LocalDate.now().format(CODE_FMT);
         Long seq = em.createQuery(
@@ -252,7 +229,6 @@ public class InvoiceService {
         return String.format("%s%s-%05d", prefix, year, seq + 1);
     }
 
-    /** DTO đầu vào cho 1 dòng hóa đơn. */
     public static class InvoiceItemDraft {
         public Integer productId;
         public Integer quantity;

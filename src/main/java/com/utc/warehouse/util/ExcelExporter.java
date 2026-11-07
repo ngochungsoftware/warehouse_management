@@ -27,31 +27,10 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
-/**
- * Xuất JTable ra file Excel (.xlsx) bằng Apache POI.
- *
- * <p>Dùng POI (thay vì tự dựng XML) để đảm bảo file luôn tương thích tuyệt đối với
- * Excel, LibreOffice, Numbers và Google Sheets — không lo báo "repair" hay mở ra trống.
- *
- * <p>Định dạng áp dụng:
- * <ul>
- *   <li>Header: chữ đậm, nền xanh, viền, căn giữa, chiều cao 24px.</li>
- *   <li>Ô số ghi đúng kiểu number để Excel tính toán, lọc và sort được.</li>
- *   <li>Cột tự co giãn theo nội dung, dòng header đóng băng khi cuộn.</li>
- *   <li>Bật AutoFilter ngay trên dòng header.</li>
- * </ul>
- */
 public final class ExcelExporter {
 
     private ExcelExporter() { }
 
-    /* ================== API công khai ================== */
-
-    /**
-     * Hộp thoại chọn nơi lưu rồi xuất bảng ra file .xlsx.
-     *
-     * @return file đã ghi, hoặc {@code null} nếu người dùng hủy
-     */
     public static File exportTable(JTable table, String defaultName) {
         JFileChooser fc = new JFileChooser();
         fc.setSelectedFile(new File(AppPaths.getExportDir().toFile(),
@@ -66,11 +45,6 @@ public final class ExcelExporter {
         return writeTable(table.getModel(), out) ? out : null;
     }
 
-    /**
-     * Ghi TableModel ra file .xlsx.
-     *
-     * @return {@code true} nếu ghi thành công
-     */
     public static boolean writeTable(TableModel m, File out) {
         try (Workbook wb = new XSSFWorkbook();
              OutputStream os = new FileOutputStream(out)) {
@@ -85,7 +59,6 @@ public final class ExcelExporter {
         }
     }
 
-    /* ================== Ghi sheet ================== */
 
     private static void writeSheet(Sheet sheet, TableModel m) {
         int colCount = m.getColumnCount();
@@ -159,7 +132,6 @@ public final class ExcelExporter {
         font.setColor(IndexedColors.WHITE.getIndex());
         style.setFont(font);
 
-        // Nền xanh #2563EB
         style.setFillForegroundColor(new XSSFColor(
                 new byte[]{(byte) 0x25, (byte) 0x63, (byte) 0xEB}, null));
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -177,7 +149,6 @@ public final class ExcelExporter {
         return d == Math.floor(d) && !Double.isInfinite(d) && Math.abs(d) < 1e15;
     }
 
-    /** Lấy workbook từ sheet (POI không expose getter trên interface Sheet). */
     private static Workbook wbOf(Sheet sheet) {
         return sheet.getWorkbook();
     }

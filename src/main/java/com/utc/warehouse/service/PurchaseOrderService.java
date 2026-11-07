@@ -25,15 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Quản lý đơn đặt hàng mua (Purchase Order).
- *
- * Workflow:
- *  1) create()         - tạo đơn (status=DRAFT)
- *  2) approve()        - chuyển sang ORDERED (gửi NCC)
- *  3) receive()        - nhận hàng, tự tạo phiếu nhập kho, cập nhật cost price
- *  4) cancel()         - huỷ đơn (chỉ khi DRAFT/ORDERED)
- */
 public class PurchaseOrderService {
 
     private static final Logger log = LoggerFactory.getLogger(PurchaseOrderService.class);
@@ -46,7 +37,6 @@ public class PurchaseOrderService {
     public List<PurchaseOrder> findByStatus(POStatus st) { return dao.findByStatus(st); }
     public Optional<PurchaseOrder> findById(Integer id) { return dao.findById(id); }
 
-    /** Tạo đơn DRAFT. */
     public PurchaseOrder create(User user, Integer supplierId, String note,
                                  LocalDate expectedDate, List<PurchaseOrderItem> items) {
         if (items == null || items.isEmpty())
@@ -89,7 +79,6 @@ public class PurchaseOrderService {
         }
     }
 
-    /** Chuyển DRAFT -> ORDERED. */
     public PurchaseOrder approve(User user, Integer poId) {
         EntityManager em = HibernateUtil.getEntityManager();
         var tx = em.getTransaction();
@@ -114,11 +103,6 @@ public class PurchaseOrderService {
         }
     }
 
-    /**
-     * Nhận hàng: tạo phiếu nhập kho từ PO, cập nhật cost price từng SP.
-     * Nếu nhận đủ -> status=RECEIVED. Nếu nhận một phần -> status=PARTIAL.
-     * Nếu chưa nhận gì -> giữ ORDERED.
-     */
     public PurchaseOrder receive(User user, Integer poId, boolean receiveAll) {
         EntityManager em = HibernateUtil.getEntityManager();
         var tx = em.getTransaction();
@@ -129,7 +113,6 @@ public class PurchaseOrderService {
             if (po.getStatus() != POStatus.ORDERED && po.getStatus() != POStatus.PARTIAL)
                 throw new IllegalStateException("Chỉ nhận hàng cho đơn ORDERED/PARTIAL (hiện tại: " + po.getStatus() + ")");
 
-            // Tính số lượng còn phải nhận
             List<StockTransactionDetail> details = new ArrayList<>();
             boolean fullyReceived = true;
             for (PurchaseOrderItem it : po.getItems()) {
@@ -143,7 +126,6 @@ public class PurchaseOrderService {
                     d.setUnitPrice(it.getUnitPrice());
                     details.add(d);
                 } else {
-                    // Partial: hỏi từng dòng (giao diện sẽ xử lý). Ở service mặc định nhận hết.
                     it.setReceivedQty(it.getOrderedQty());
                     StockTransactionDetail d = new StockTransactionDetail();
                     d.setProduct(it.getProduct());
@@ -155,14 +137,12 @@ public class PurchaseOrderService {
             if (details.isEmpty())
                 throw new IllegalStateException("Đơn hàng đã được nhận đủ.");
 
-            // Tạo phiếu nhập (gọi vào transaction hiện tại)
             StockTransaction st = stockService.saveTransactionInTx(
                     em, user, TransactionType.IMPORT, PartnerType.SUPPLIER,
                     po.getSupplier() == null ? null : po.getSupplier().getId(),
                     "Nhận hàng từ PO " + po.getCode(),
                     details);
 
-            // Cập nhật trạng thái PO
             for (PurchaseOrderItem it : po.getItems()) {
                 if (it.getReceivedQty() < it.getOrderedQty()) {
                     fullyReceived = false;
@@ -189,7 +169,6 @@ public class PurchaseOrderService {
         }
     }
 
-    /** Huỷ đơn. */
     public PurchaseOrder cancel(User user, Integer poId, String reason) {
         EntityManager em = HibernateUtil.getEntityManager();
         var tx = em.getTransaction();

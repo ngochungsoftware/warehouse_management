@@ -11,10 +11,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Truy vấn báo cáo doanh thu / lợi nhuận / công nợ.
- * Tất cả query chỉ đọc, không cần transaction.
- */
+
 public class FinanceReportDAO {
 
     /* ============== Doanh thu / Lợi nhuận theo ngày ============== */
@@ -56,7 +53,6 @@ public class FinanceReportDAO {
     public List<RevenueRow> revenueByDate(LocalDate from, LocalDate to) {
         EntityManager em = HibernateUtil.getEntityManager();
         try {
-            // Query: gom theo issue_date
             @SuppressWarnings("unchecked")
             List<Object[]> rows = em.createQuery(
                     "SELECT i.issueDate, " +
@@ -90,7 +86,6 @@ public class FinanceReportDAO {
         }
     }
 
-    /* ============== Top sản phẩm bán chạy ============== */
     public static final class TopProductRow {
         public final Integer productId;
         public final String sku;
@@ -144,7 +139,6 @@ public class FinanceReportDAO {
         }
     }
 
-    /* ============== Công nợ khách hàng ============== */
     public static final class CustomerDebtRow {
         public final Integer customerId;
         public final String customerName;
@@ -193,7 +187,6 @@ public class FinanceReportDAO {
         }
     }
 
-    /* ============== Tổng quan dashboard ============== */
     public static final class DashboardSummary {
         public final BigDecimal todayRevenue;
         public final BigDecimal todayProfit;
@@ -274,14 +267,6 @@ public class FinanceReportDAO {
         }
     }
 
-    /* ============== Tồn kho theo danh mục (cho pie chart) ============== */
-
-    /**
-     * Tổng số lượng tồn theo danh mục — dùng cho pie chart.
-     *
-     * <p>Cùng công thức tồn với {@code ReportDAO}: SUM(nhập) - SUM(xuất).
-     * Chỉ trả về danh mục có tồn > 0 để pie chart không có lát "0".
-     */
     public List<CategoryStockRow> inventoryByCategory() {
         EntityManager em = HibernateUtil.getEntityManager();
         try {
@@ -304,8 +289,6 @@ public class FinanceReportDAO {
                 long qty = ((Number) r[1]).longValue();
                 if (qty > 0) out.add(new CategoryStockRow(name, qty));
             }
-            // Sắp xếp giảm dần theo tồn — làm ở Java vì HQL không ổn định với
-            // ORDER BY theo biểu thức aggregate CASE.
             out.sort((a, b) -> Long.compare(b.quantity, a.quantity));
             return out;
         } finally {
@@ -320,8 +303,6 @@ public class FinanceReportDAO {
         public String getCategoryName() { return categoryName; }
         public long getQuantity() { return quantity; }
     }
-
-    /* ============== Nhập/Xuất theo ngày (cho stacked bar) ============== */
 
     private static BigDecimal toBig(Object o) {
         if (o == null) return BigDecimal.ZERO;

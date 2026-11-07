@@ -34,13 +34,6 @@ public class UserDAO extends GenericDAO<User, Integer> {
         }
     }
 
-    /**
-     * Lấy danh sách nhân viên (role = STAFF), sắp xếp: hoạt động trước, rồi theo
-     * username.
-     *
-     * <p>Dùng cho màn "Quản lý nhân viên" — chỉ quan tâm tài khoản nhân viên,
-     * không lẫn tài khoản quản trị.
-     */
     public List<User> findAllStaff() {
         EntityManager em = HibernateUtil.getEntityManager();
         try {
@@ -53,23 +46,6 @@ public class UserDAO extends GenericDAO<User, Integer> {
         }
     }
 
-    /**
-     * Đếm tổng số bản ghi ở các bảng con đang trỏ tới user này.
-     *
-     * <p>Trước khi hard delete, các bảng này sẽ chặn xoá do foreign key
-     * ({@code fk_tx_user} không có {@code ON DELETE}). Đếm trước giúp UI hiển thị
-     * lý do cụ thể thay vì lỗi SQL kèm mã lỗi khó hiểu.
-     *
-     * <p>Dùng <b>native SQL</b> chứ không dùng JPQL: JPQL phải gọi theo <b>tên
-     * entity</b> ({@code AuditLog}, {@code StockTransaction}...), không phải
-     * tên bảng ({@code audit_logs}, {@code stock_transactions}...). Dùng tên bảng
-     * sẽ ném {@code QuerySyntaxException}, và nếu nuốt lỗi thì hàm luôn trả 0 —
-     * tức UI không bao giờ cảnh báo "có dữ liệu liên quan" và sẽ cố xoá hẳn rồi
-     * mới gặp lỗi SQL thô từ MySQL.
-     *
-     * <p>Chỉ đếm những bảng thực sự tồn tại trong DB (tra {@code information_schema}),
-     * nên DB cũ chưa migrate không làm hỏng hàm.
-     */
     public long countReferences(Integer userId) {
         EntityManager em = HibernateUtil.getEntityManager();
         String[] tables = {
@@ -87,7 +63,6 @@ public class UserDAO extends GenericDAO<User, Integer> {
         }
     }
 
-    /** Đếm trong 1 bảng; trả 0 nếu bảng không tồn tại. */
     private long countTable(EntityManager em, String table, Integer userId) {
         try {
             Object exists = em.createNativeQuery(
@@ -102,7 +77,6 @@ public class UserDAO extends GenericDAO<User, Integer> {
                         .setParameter("uid", userId)
                         .getSingleResult()).longValue();
         } catch (Exception ex) {
-            // Bảng thiếu / không có cột user_id — bỏ qua, không chặn thao tác.
             return 0;
         }
     }

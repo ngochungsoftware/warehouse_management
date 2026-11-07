@@ -11,18 +11,11 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-/**
- * CRUD generic dùng JPA EntityManager.
- * <p>DAO cụ thể extend class này và truyền kiểu entity.
- * Mỗi thao tác ghi (save/update/delete) chạy trong transaction riêng.
- */
 public abstract class GenericDAO<T, ID> {
 
     private static final Logger log = LoggerFactory.getLogger(GenericDAO.class);
 
     protected abstract Class<T> entityClass();
-
-    // --- Read --------------------------------------------------------------
 
     public Optional<T> findById(ID id) {
         EntityManager em = HibernateUtil.getEntityManager();
@@ -53,8 +46,6 @@ public abstract class GenericDAO<T, ID> {
         }
     }
 
-    // --- Write -------------------------------------------------------------
-
     public T save(T entity) {
         return inTransaction(em -> {
             em.persist(entity);
@@ -81,11 +72,6 @@ public abstract class GenericDAO<T, ID> {
         });
     }
 
-    // --- Helpers -----------------------------------------------------------
-
-    /**
-     * Chạy hàm trong 1 transaction, commit nếu OK, rollback nếu exception.
-     */
     protected <R> R inTransaction(Function<EntityManager, R> work) {
         EntityManager em = HibernateUtil.getEntityManager();
         EntityTransaction tx = em.getTransaction();
@@ -103,9 +89,6 @@ public abstract class GenericDAO<T, ID> {
         }
     }
 
-    /**
-     * Variant cho thao tác không cần giá trị trả về.
-     */
     protected void inTransactionVoid(Consumer<EntityManager> work) {
         inTransaction(em -> { work.accept(em); return null; });
     }

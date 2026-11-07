@@ -106,16 +106,6 @@ public class ReportDAO {
         public long getQuantity() { return quantity; }
     }
 
-    /**
-     * Lượng nhập/xuất theo ngày trong khoảng [from, to] — dùng cho stacked bar.
-     *
-     * <p>Ngày lấy từ {@code createdAt} (LocalDateTime) của StockTransaction,
-     * cắt phần giờ bằng {@code DATE()} để gom theo ngày.
-     *
-     * <p>Lưu ý: {@code DATE(...)} là hàm SQL nên Hibernate trả về
-     * {@link java.sql.Date}, KHÔNG phải {@link LocalDate}. Phải chuyển đổi
-     * ở Java — cast thẳng sẽ ném ClassCastException.
-     */
     public List<StockFlowRow> stockFlowByDate(LocalDate from, LocalDate to) {
         EntityManager em = HibernateUtil.getEntityManager();
         try {
@@ -143,11 +133,6 @@ public class ReportDAO {
         }
     }
 
-    /**
-     * Chuyển giá trị ngày trả về từ query về {@link LocalDate}.
-     * Chịu được cả {@link java.sql.Date}, {@link LocalDateTime}, {@link LocalDate}
-     * và {@link java.util.Date} để không phụ thuộc cách driver trả về.
-     */
     private static LocalDate toLocalDate(Object o) {
         if (o == null) return null;
         if (o instanceof LocalDate ld) return ld;

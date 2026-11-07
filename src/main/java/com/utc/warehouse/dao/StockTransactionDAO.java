@@ -13,13 +13,6 @@ public class StockTransactionDAO extends GenericDAO<StockTransaction, Integer> {
     @Override
     protected Class<StockTransaction> entityClass() { return StockTransaction.class; }
 
-    /**
-     * Lấy tất cả phiếu, JOIN FETCH user + details (+ product) để tránh
-     * LazyInitializationException khi UI đọc ngoài transaction.
-     *
-     * <p>Lưu ý: Hibernate không cho dùng setMaxResults kèm collection fetch.
-     * Nếu sau này cần phân trang, phải query 2-step (query id, sau đó fetch).
-     */
     public List<StockTransaction> findAllOrdered() {
         EntityManager em = HibernateUtil.getEntityManager();
         try {
@@ -75,7 +68,6 @@ public class StockTransactionDAO extends GenericDAO<StockTransaction, Integer> {
         }
     }
 
-    /** Lấy 1 phiếu kèm đầy đủ details + product + user. Dùng cho dialog chi tiết. */
     public StockTransaction findByIdWithDetails(Integer id) {
         EntityManager em = HibernateUtil.getEntityManager();
         try {

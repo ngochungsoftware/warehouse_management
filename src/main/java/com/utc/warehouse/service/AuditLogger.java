@@ -11,12 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Ghi log thao tác của user.
- *
- * <p>Dùng {@link #log} (ghi ngoài transaction) cho sự kiện đơn giản,
- * hoặc {@link #logInTx} (ghi trong transaction đang mở) cho sự kiện cần rollback cùng entity.
- */
+
 public class AuditLogger {
 
     private static final Logger log = LoggerFactory.getLogger(AuditLogger.class);

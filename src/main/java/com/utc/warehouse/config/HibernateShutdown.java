@@ -1,9 +1,5 @@
 package com.utc.warehouse.config;
 
-import com.utc.warehouse.ui.LoginFrame;
-
-import javax.swing.*;
-
 /** Helper shutdown để dùng trong các listener thoát. */
 public final class HibernateShutdown {
     private HibernateShutdown() { }

@@ -19,14 +19,6 @@ public class AuditLogDAO extends GenericDAO<AuditLog, Integer> {
     @Override
     protected Class<AuditLog> entityClass() { return AuditLog.class; }
 
-    /**
-     * Lọc log theo nhiều tiêu chí. Tất cả tham số đều nullable.
-     * - userId: lọc theo user
-     * - action: lọc theo hành động
-     * - entityType: lọc theo loại đối tượng
-     * - keyword: tìm trong entityCode hoặc details
-     * - fromDate, toDate: khoảng thời gian (so sánh với created_at)
-     */
     public List<AuditLog> search(Integer userId, com.utc.warehouse.enums.AuditAction action,
                                  String entityType, String keyword,
                                  LocalDate fromDate, LocalDate toDate,
