@@ -9,7 +9,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 public class FinanceReportDAO {
@@ -54,17 +56,33 @@ public class FinanceReportDAO {
         EntityManager em = HibernateUtil.getEntityManager();
         try {
             @SuppressWarnings("unchecked")
+            List<Object[]> cogsRows = em.createQuery(
+                    "SELECT i.issueDate, " +
+                            " COALESCE(SUM(it.quantity * it.costPriceSnapshot), 0) " +
+                    "FROM InvoiceItem it JOIN it.invoice i " +
+                    "WHERE i.status <> com.utc.warehouse.enums.InvoiceStatus.CANCELLED " +
+                            "  AND i.issueDate >= :from AND i.issueDate <= :to " +
+                    "GROUP BY i.issueDate")
+                    .setParameter("from", from)
+                    .setParameter("to", to)
+                    .getResultList();
+
+            Map<LocalDate, BigDecimal> cogsMap = new HashMap<>();
+            for (Object[] r : cogsRows) {
+                cogsMap.put((LocalDate) r[0], toBig(r[1]));
+            }
+
+            @SuppressWarnings("unchecked")
             List<Object[]> rows = em.createQuery(
                     "SELECT i.issueDate, " +
                             " COUNT(i), " +
                             " COALESCE(SUM(i.subtotal), 0), " +
                             " COALESCE(SUM(i.discount), 0), " +
-                            " COALESCE(SUM(i.vatAmount), 0), " +
-                            " COALESCE(SUM(it.quantity * it.costPriceSnapshot), 0) " +
-                            "FROM Invoice i LEFT JOIN i.items it " +
-                            "WHERE i.status <> com.utc.warehouse.enums.InvoiceStatus.CANCELLED " +
+                            " COALESCE(SUM(i.vatAmount), 0) " +
+                    "FROM Invoice i " +
+                    "WHERE i.status <> com.utc.warehouse.enums.InvoiceStatus.CANCELLED " +
                             "  AND i.issueDate >= :from AND i.issueDate <= :to " +
-                            "GROUP BY i.issueDate ORDER BY i.issueDate")
+                    "GROUP BY i.issueDate ORDER BY i.issueDate")
                     .setParameter("from", from)
                     .setParameter("to", to)
                     .getResultList();
@@ -75,7 +93,7 @@ public class FinanceReportDAO {
                 BigDecimal sub = toBig(r[2]);
                 BigDecimal disc = toBig(r[3]);
                 BigDecimal vat = toBig(r[4]);
-                BigDecimal cogs = toBig(r[5]);
+                BigDecimal cogs = cogsMap.getOrDefault(date, BigDecimal.ZERO);
                 BigDecimal net = sub.subtract(disc);
                 BigDecimal profit = net.subtract(cogs);
                 out.add(new RevenueRow(date, cnt, sub.add(vat), disc, net, cogs, vat, profit));
@@ -216,24 +234,42 @@ public class FinanceReportDAO {
             LocalDate today = LocalDate.now();
             LocalDate monthStart = today.withDayOfMonth(1);
 
-            Object[] todayRow = (Object[]) em.createQuery(
-                    "SELECT COALESCE(SUM(i.total - i.discount), 0), " +
-                            " COALESCE(SUM(it.quantity * (it.unitPrice - it.costPriceSnapshot) - it.discount), 0) " +
-                            "FROM Invoice i LEFT JOIN i.items it " +
+            // Hôm nay: Doanh thu lấy trực tiếp từ Invoice (không JOIN items, không trừ lặp discount)
+            BigDecimal todayRevenue = toBig(em.createQuery(
+                    "SELECT COALESCE(SUM(i.total), 0) FROM Invoice i " +
                             "WHERE i.issueDate = :d " +
                             "  AND i.status <> com.utc.warehouse.enums.InvoiceStatus.CANCELLED")
                     .setParameter("d", today)
-                    .getSingleResult();
+                    .getSingleResult());
 
-            Object[] monthRow = (Object[]) em.createQuery(
-                    "SELECT COALESCE(SUM(i.total - i.discount), 0), " +
-                            " COALESCE(SUM(it.quantity * (it.unitPrice - it.costPriceSnapshot) - it.discount), 0), " +
-                            " COUNT(DISTINCT i.id) " +
-                            "FROM Invoice i LEFT JOIN i.items it " +
-                            "WHERE i.issueDate >= :from " +
-                            "  AND i.status <> com.utc.warehouse.enums.InvoiceStatus.CANCELLED")
+            // Hôm nay: Lợi nhuận lấy từ InvoiceItem JOIN invoice (không nhân bản do xuất phát từ item)
+            BigDecimal todayProfit = toBig(em.createQuery(
+                    "SELECT COALESCE(SUM(it.quantity * (it.unitPrice - it.costPriceSnapshot) - it.discount), 0) " +
+                    "FROM InvoiceItem it JOIN it.invoice i " +
+                    "WHERE i.issueDate = :d " +
+                    "  AND i.status <> com.utc.warehouse.enums.InvoiceStatus.CANCELLED")
+                    .setParameter("d", today)
+                    .getSingleResult());
+
+            // Tháng này: Doanh thu và Số lượng hóa đơn lấy từ Invoice
+            Object[] monthInv = (Object[]) em.createQuery(
+                    "SELECT COALESCE(SUM(i.total), 0), COUNT(i) " +
+                    "FROM Invoice i " +
+                    "WHERE i.issueDate >= :from " +
+                    "  AND i.status <> com.utc.warehouse.enums.InvoiceStatus.CANCELLED")
                     .setParameter("from", monthStart)
                     .getSingleResult();
+            BigDecimal monthRevenue = toBig(monthInv[0]);
+            long monthCount = ((Number) monthInv[1]).longValue();
+
+            // Tháng này: Lợi nhuận lấy từ InvoiceItem JOIN invoice
+            BigDecimal monthProfit = toBig(em.createQuery(
+                    "SELECT COALESCE(SUM(it.quantity * (it.unitPrice - it.costPriceSnapshot) - it.discount), 0) " +
+                    "FROM InvoiceItem it JOIN it.invoice i " +
+                    "WHERE i.issueDate >= :from " +
+                    "  AND i.status <> com.utc.warehouse.enums.InvoiceStatus.CANCELLED")
+                    .setParameter("from", monthStart)
+                    .getSingleResult());
 
             BigDecimal receivable = toBig(em.createQuery(
                     "SELECT COALESCE(SUM(i.debt), 0) FROM Invoice i " +
@@ -255,8 +291,8 @@ public class FinanceReportDAO {
                     .getSingleResult();
 
             return new DashboardSummary(
-                    toBig(todayRow[0]), toBig(todayRow[1]),
-                    toBig(monthRow[0]), toBig(monthRow[1]), ((Number) monthRow[2]).longValue(),
+                    todayRevenue, todayProfit,
+                    monthRevenue, monthProfit, monthCount,
                     receivable,
                     toBig(invRow[0]),
                     ((Number) invRow[1]).longValue(),
